@@ -1,4 +1,6 @@
 from pathlib import Path
+import threading
+import time
 
 import pytest
 
@@ -147,3 +149,70 @@ def test_source_ingestor_requires_parser(tmp_path):
             file_path=log_file,
             parser=None,
         )
+
+
+def test_source_ingestor_ingest_stream_processes_new_record(
+    tmp_path,
+):
+    log_file = tmp_path / "linux_auth.log"
+
+    log_file.write_text(
+        "Mar 10 10:15:30 server sshd[1234]: "
+        "Failed password for admin from "
+        "192.168.1.10 port 54321 ssh2\n",
+        encoding="utf-8",
+    )
+
+    ingestor = SourceIngestor(
+        file_path=log_file,
+        parser=LinuxAuthParser(),
+    )
+
+    stream = ingestor.ingest_stream(
+        poll_interval=0.01,
+        start_at_end=True,
+        year=2026,
+    )
+
+    received: list[SecurityEvent] = []
+
+    def consume():
+        received.append(next(stream))
+
+    thread = threading.Thread(
+        target=consume,
+        daemon=True,
+    )
+
+    thread.start()
+
+    time.sleep(0.05)
+
+    assert received == []
+
+    with log_file.open(
+        "a",
+        encoding="utf-8",
+    ) as file:
+        file.write(
+            "Mar 10 10:15:31 server sshd[1235]: "
+            "Failed password for invalid user root from "
+            "192.168.1.20 port 54322 ssh2\n"
+        )
+        file.flush()
+
+    thread.join(timeout=1)
+
+    assert len(received) == 1
+
+    event = received[0]
+
+    assert isinstance(event, SecurityEvent)
+    assert event.username == "root"
+    assert event.src_ip == "192.168.1.20"
+    assert event.src_port == 54322
+    assert event.dst_port == 22
+    assert event.protocol == 6
+    assert event.event_type == "authentication_failure"
+
+    stream.close()

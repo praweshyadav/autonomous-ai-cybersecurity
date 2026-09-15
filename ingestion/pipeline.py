@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any
 
 from correlation.schema import SecurityEvent
 from ingestion.normalizer import SecurityEventNormalizer
