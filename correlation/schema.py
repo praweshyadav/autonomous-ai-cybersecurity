@@ -57,6 +57,21 @@ class SecurityEvent:
     # Extensible metadata for future sources
     metadata: dict = field(default_factory=dict)
 
+    def to_dict(self) -> dict:
+        """
+        Convert the security event into a JSON-serializable dictionary.
+        """
+
+        data = {}
+
+        for key, value in self.__dict__.items():
+            if isinstance(value, datetime):
+                data[key] = value.isoformat()
+            else:
+                data[key] = value
+
+        return data
+
 
 @dataclass
 class Incident:
@@ -65,6 +80,7 @@ class Incident:
     """
 
     incident_id: str
+
     events: list[SecurityEvent] = field(
         default_factory=list
     )
