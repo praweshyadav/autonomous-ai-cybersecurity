@@ -1,0 +1,42 @@
+[
+  {
+    "question": "An attacker creates or modifies a scheduled task to execute malicious commands automatically.",
+    "expected_techniques": ["T1053.005"]
+  },
+  {
+    "question": "An attacker uses PowerShell to execute malicious commands on a Windows system.",
+    "expected_techniques": ["T1059.001"]
+  },
+  {
+    "question": "An attacker dumps credentials from the Windows Security Account Manager.",
+    "expected_techniques": ["T1003.002"]
+  },
+  {
+    "question": "An attacker compresses collected files into an archive before sending them out.",
+    "expected_techniques": ["T1560.001"]
+  },
+  {
+    "question": "An attacker uses Remote Desktop Protocol to remotely access a compromised Windows machine.",
+    "expected_techniques": ["T1021.001"]
+  },
+  {
+    "question": "An attacker repeatedly guesses passwords to gain access to an account.",
+    "expected_techniques": ["T1110.001"]
+  },
+  {
+    "question": "An attacker uses a web shell to execute commands on a compromised web server.",
+    "expected_techniques": ["T1505.003"]
+  },
+  {
+    "question": "An attacker uses a keylogger to capture keystrokes from a victim.",
+    "expected_techniques": ["T1056.001"]
+  },
+  {
+    "question": "An attacker performs network service scanning to discover available services on systems.",
+    "expected_techniques": ["T1046"]
+  },
+  {
+    "question": "An attacker uses phishing with a malicious attachment to deliver malware.",
+    "expected_techniques": ["T1566.001"]
+  }
+]
