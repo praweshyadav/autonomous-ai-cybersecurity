@@ -10,6 +10,48 @@ class SecurityEventDeserializer:
     received from the Redis Stream.
     """
 
+    @staticmethod
+    def _deserialize_metadata(
+        metadata: Any,
+    ) -> dict[str, Any]:
+        """
+        Restore numeric CICFlowMeter feature values after
+        Redis JSON serialization.
+
+        JSON serialization can represent all values as strings
+        depending on the producer/consumer path. CICFlowMeter
+        features must be numeric before reaching the ML models.
+        """
+
+        if metadata is None:
+            return {}
+
+        if not isinstance(metadata, dict):
+            raise TypeError(
+                "metadata must be a dictionary."
+            )
+
+        normalized: dict[str, Any] = {}
+
+        for key, value in metadata.items():
+            if isinstance(value, str):
+                stripped = value.strip()
+
+                if stripped == "":
+                    normalized[key] = value
+                    continue
+
+                try:
+                    normalized[key] = float(stripped)
+                    continue
+                except ValueError:
+                    normalized[key] = value
+                    continue
+
+            normalized[key] = value
+
+        return normalized
+
     def deserialize(
         self,
         event_data: dict[str, Any],
@@ -49,6 +91,13 @@ class SecurityEventDeserializer:
             raise TypeError(
                 "timestamp must be a datetime or ISO-8601 string."
             )
+
+        metadata = self._deserialize_metadata(
+            event_data.get(
+                "metadata",
+                {},
+            )
+        )
 
         return SecurityEvent(
             event_id=str(event_data["event_id"]),
@@ -94,10 +143,7 @@ class SecurityEventDeserializer:
 
             raw_log=event_data.get("raw_log"),
 
-            metadata=event_data.get(
-                "metadata",
-                {},
-            ),
+            metadata=metadata,
         )
 
     def deserialize_batch(

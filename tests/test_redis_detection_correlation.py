@@ -392,6 +392,6 @@ def test_redis_pipeline_reaches_correlation():
     )
 
     for incident in incidents:
-        assert incident.event_count >= 1
+        assert len(incident.events) >= 1
 
     queue.clear()

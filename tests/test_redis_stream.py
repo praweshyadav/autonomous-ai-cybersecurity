@@ -18,7 +18,7 @@ class FakeEvent:
 
 
 def test_queue_requires_valid_redis_url():
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         RedisEventQueue(redis_url="")
 
 
@@ -302,3 +302,9 @@ def test_read_new_requires_non_negative_block_time():
 
     with pytest.raises(ValueError):
         queue.read_new(block_ms=-1)
+
+
+
+
+
+

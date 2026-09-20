@@ -4,7 +4,6 @@ import joblib
 import pytest
 
 from correlation.schema import SecurityEvent
-from correlation.schema import SecurityEvent
 from detection.handler import DetectionHandler, DetectionResult
 from detection.model_loader import (
     AttackFamilyModelBundle,
@@ -314,6 +313,7 @@ def test_batch_handles_unsupported_events(linux_event):
         DetectionResult,
     )
     assert results[0].supported is False
+
 def test_batch_results_match_individual_detection(
     network_event_with_features,
     real_model_bundles,
@@ -333,13 +333,17 @@ def test_batch_results_match_individual_detection(
             event_id="NET-FEATURED-002",
             timestamp=network_event_with_features.timestamp,
             event_type="network_flow",
-            metadata=dict(network_event_with_features.metadata),
+            metadata=dict(
+                network_event_with_features.metadata
+            ),
         ),
         SecurityEvent(
             event_id="NET-FEATURED-003",
             timestamp=network_event_with_features.timestamp,
             event_type="network_flow",
-            metadata=dict(network_event_with_features.metadata),
+            metadata=dict(
+                network_event_with_features.metadata
+            ),
         ),
     ]
 
@@ -363,3 +367,55 @@ def test_batch_results_match_individual_detection(
         assert batch.detector_type == individual.detector_type
         assert batch.supported == individual.supported
 
+def test_batch_results_match_individual_detection(
+    network_event_with_features,
+    real_model_bundles,
+):
+    handler = DetectionHandler()
+
+    binary_model, family_model = real_model_bundles
+
+    handler.attach_models(
+        binary_model=binary_model,
+        family_model=family_model,
+    )
+
+    events = [
+        network_event_with_features,
+        SecurityEvent(
+            event_id="NET-FEATURED-002",
+            timestamp=network_event_with_features.timestamp,
+            event_type="network_flow",
+            metadata=dict(
+                network_event_with_features.metadata
+            ),
+        ),
+        SecurityEvent(
+            event_id="NET-FEATURED-003",
+            timestamp=network_event_with_features.timestamp,
+            event_type="network_flow",
+            metadata=dict(
+                network_event_with_features.metadata
+            ),
+        ),
+    ]
+
+    individual_results = [
+        handler.detect(event)
+        for event in events
+    ]
+
+    batch_results = handler.detect_batch(events)
+
+    assert len(batch_results) == 3
+
+    for individual, batch in zip(
+        individual_results,
+        batch_results,
+    ):
+        assert batch.event_id == individual.event_id
+        assert batch.detected == individual.detected
+        assert batch.attack_family == individual.attack_family
+        assert batch.confidence == individual.confidence
+        assert batch.detector_type == individual.detector_type
+        assert batch.supported == individual.supported

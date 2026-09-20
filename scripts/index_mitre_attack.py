@@ -1,4 +1,4 @@
-import json
+﻿import json
 from pathlib import Path
 
 from rag.documents.loader import KnowledgeDocument
@@ -11,7 +11,7 @@ INPUT_FILE = Path(
     "rag/documents/mitre/parsed_documents.jsonl"
 )
 
-QDRANT_PATH = "rag/index/qdrant"
+QDRANT_URL = "http://localhost:6333"
 
 COLLECTION_NAME = "mitre_attack"
 
@@ -126,15 +126,15 @@ def main():
     )
 
     # ------------------------------------------------------------
-    # 4. Create fresh Qdrant vector store
+    # 4. Connect to Qdrant Server
     # ------------------------------------------------------------
 
     print(
-        "\n[4/5] Creating fresh Qdrant vector store..."
+        "\n[4/5] Connecting to Qdrant server..."
     )
 
     vector_store = VectorStore(
-        path=QDRANT_PATH,
+        url=QDRANT_URL,
         collection_name=COLLECTION_NAME,
         vector_size=384,
     )
@@ -161,91 +161,98 @@ def main():
 
     total = len(chunks)
 
-    for start in range(
-        0,
-        total,
-        BATCH_SIZE,
-    ):
+    try:
 
-        batch = chunks[
-            start:start + BATCH_SIZE
-        ]
-
-        texts = [
-            chunk.content
-            for chunk in batch
-        ]
-
-        embeddings = embedding_model.encode(
-            texts
-        )
-
-        vector_store.add_chunks(
-            batch,
-            embeddings,
-        )
-
-        processed = min(
-            start + BATCH_SIZE,
+        for start in range(
+            0,
             total,
+            BATCH_SIZE,
+        ):
+
+            batch = chunks[
+                start:start + BATCH_SIZE
+            ]
+
+            texts = [
+                chunk.content
+                for chunk in batch
+            ]
+
+            embeddings = embedding_model.encode(
+                texts
+            )
+
+            vector_store.add_chunks(
+                batch,
+                embeddings,
+            )
+
+            processed = min(
+                start + BATCH_SIZE,
+                total,
+            )
+
+            print(
+                f"Indexed {processed:,}/{total:,}"
+            )
+
+        # --------------------------------------------------------
+        # Final verification
+        # --------------------------------------------------------
+
+        final_count = vector_store.count()
+
+        print(
+            "\n" + "=" * 70
         )
 
         print(
-            f"Indexed {processed:,}/{total:,}"
+            "MITRE ATT&CK INDEXING COMPLETE"
         )
 
-    # ------------------------------------------------------------
-    # Final verification
-    # ------------------------------------------------------------
-
-    final_count = vector_store.count()
-
-    print(
-        "\n" + "=" * 70
-    )
-
-    print(
-        "MITRE ATT&CK INDEXING COMPLETE"
-    )
-
-    print(
-        "=" * 70
-    )
-
-    print(
-        f"Documents : {len(documents):,}"
-    )
-
-    print(
-        f"Chunks    : {len(chunks):,}"
-    )
-
-    print(
-        f"Vectors   : {final_count:,}"
-    )
-
-    print(
-        f"Collection: {COLLECTION_NAME}"
-    )
-
-    print(
-        "=" * 70
-    )
-
-    # ------------------------------------------------------------
-    # Safety check
-    # ------------------------------------------------------------
-
-    if final_count != len(chunks):
-        raise RuntimeError(
-            "Index verification failed: "
-            f"{final_count:,} vectors for "
-            f"{len(chunks):,} chunks."
+        print(
+            "=" * 70
         )
 
-    print(
-        "Index verification: PASSED"
-    )
+        print(
+            f"Documents : {len(documents):,}"
+        )
+
+        print(
+            f"Chunks    : {len(chunks):,}"
+        )
+
+        print(
+            f"Vectors   : {final_count:,}"
+        )
+
+        print(
+            f"Collection: {COLLECTION_NAME}"
+        )
+
+        print(
+            "=" * 70
+        )
+
+        # --------------------------------------------------------
+        # Safety check
+        # --------------------------------------------------------
+
+        if final_count != len(chunks):
+
+            raise RuntimeError(
+                "Index verification failed: "
+                f"{final_count:,} vectors for "
+                f"{len(chunks):,} chunks."
+            )
+
+        print(
+            "Index verification: PASSED"
+        )
+
+    finally:
+
+        vector_store.close()
 
 
 if __name__ == "__main__":

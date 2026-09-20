@@ -221,6 +221,7 @@ def test_has_handler_requires_string():
 
     with pytest.raises(TypeError):
         router.has_handler(None)
+
 def test_route_batch_uses_batch_handler_when_available(event):
     router = EventRouter()
 

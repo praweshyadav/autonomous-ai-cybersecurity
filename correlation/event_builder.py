@@ -123,6 +123,8 @@ def build_security_event(
             errors="raise",
         )
 
+      
+
     def optional_int(column: str):
         value = row.get(column)
 

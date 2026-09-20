@@ -1,155 +1,190 @@
-from agent.context_builder import IncidentContext
+﻿from datetime import datetime, timezone
+
+from correlation.schema import Incident, SecurityEvent
+
+from agent.context_builder import IncidentContextBuilder
 from agent.incident_rag import IncidentRAGResult
-from agent.investigation import (
-    InvestigationEvidence,
-    InvestigationResult,
-    InvestigationTechnique,
-)
-from agent.llm_investigation_agent import (
-    LLMInvestigationAgent,
-)
+from agent.investigation import InvestigationResult
+from agent.investigation_engine import InvestigationEngine
+from agent.llm_contract import LLMInvestigationOutput
+from agent.llm_input_builder import LLMInputBuilder
+from agent.llm_investigation_agent import LLMInvestigationAgent
 from agent.mock_llm_provider import MockLLMProvider
 
 
-class FakeRAGResult:
-    def __init__(self, title, score):
-        self.title = title
-        self.score = score
+def make_incident():
+    timestamp = datetime.now(timezone.utc)
 
+    event = SecurityEvent(
+        event_id="22222222-2222-4222-8222-222222222222",
+        timestamp=timestamp,
+        src_ip="10.10.10.50",
+        dst_ip="192.168.1.20",
+        src_port=45000,
+        dst_port=22,
+        protocol=6,
+        protocol_name="TCP",
+        binary_prediction=1,
+        attack_family="Brute Force",
+        confidence=0.95,
+    )
 
-def build_context():
-    return IncidentContext(
-        incident_id="INC-TEST-001",
-        start_time="2018-02-14T10:33:26",
-        end_time="2018-02-14T10:38:24",
-        duration_seconds=298.0,
+    return Incident(
+        incident_id="INC-LLM-001",
+        events=[event],
+        start_time=timestamp,
+        end_time=timestamp,
         severity="high",
         primary_attack_family="Brute Force",
-        event_count=905,
-        confidence=0.8222,
-        attack_families=[
-            "Brute Force",
-            "DoS",
-        ],
-        family_distribution={
-            "Brute Force": 825,
-            "DoS": 80,
-        },
+        attack_families=["Brute Force"],
+        family_distribution={"Brute Force": 1},
+        confidence=0.95,
+        src_ips=["10.10.10.50"],
+        dst_ips=["192.168.1.20"],
+        dst_ports=[22],
         protocols=[6],
-        destination_ports=[21],
-        source_ips=[],
-        destination_ips=[],
     )
 
 
-def build_investigation():
-    return InvestigationResult(
-        incident_id="INC-TEST-001",
-        summary="Likely brute-force activity.",
-        threat_assessment="High",
-        attack_families=[
-            "Brute Force",
-            "DoS",
-        ],
-        evidence=[
-            InvestigationEvidence(
-                source="incident_correlation",
-                description="905 correlated events.",
-                evidence_type="observed",
-            )
-        ],
-        mitre_techniques=[
-            InvestigationTechnique(
-                technique_id="T1110",
-                technique_name="Brute Force",
-                relevance="high",
-                confidence=0.8426,
-            )
-        ],
-        confidence=0.8222,
-        recommended_actions=[
-            "Review authentication logs."
-        ],
-        metadata={
-            "evaluated_mitre_count": 1,
-        },
+def test_llm_investigation_agent_with_mock_provider():
+    incident = make_incident()
+
+    context_builder = IncidentContextBuilder()
+
+    context = context_builder.build(incident)
+
+    rag_result = IncidentRAGResult(
+        incident_id=incident.incident_id,
+        query="Brute Force SSH investigation",
+        results=[],
     )
 
+    investigation_engine = InvestigationEngine()
 
-def build_rag_result():
-    return IncidentRAGResult(
-        incident_id="INC-TEST-001",
-        query="Cybersecurity investigation.",
-        results=[
-            FakeRAGResult(
-                title="T1110 - Brute Force",
-                score=0.4630,
-            )
-        ],
+    investigation = investigation_engine.investigate(
+        context=context,
+        rag_result=rag_result,
     )
 
+    provider = MockLLMProvider()
 
-def test_agent_orchestrates_investigation():
     agent = LLMInvestigationAgent(
-        provider=MockLLMProvider()
+        provider=provider,
+        input_builder=LLMInputBuilder(),
     )
 
     result = agent.investigate(
-        context=build_context(),
-        investigation=build_investigation(),
-        rag_result=build_rag_result(),
+        context=context,
+        investigation=investigation,
+        rag_result=rag_result,
     )
 
-    assert result.incident_id == "INC-TEST-001"
+    assert isinstance(
+        result,
+        LLMInvestigationOutput,
+    )
+
+    assert result.incident_id == incident.incident_id
+
+    assert result.summary
 
     assert result.threat_assessment == "High"
 
+    assert result.confidence == 0.80
+
+    assert result.metadata["provider"] == "mock"
+
     assert len(result.hypotheses) == 1
 
-    assert (
-        "Brute Force"
-        in result.hypotheses[0].hypothesis
+    assert "Brute Force" in (
+        result.hypotheses[0].hypothesis
     )
 
-    assert len(
-        result.technique_assessments
-    ) == 1
+    assert result.hypotheses[0].confidence == 0.80
 
-    assert (
-        result.technique_assessments[0].technique_id
-        == "T1110"
+    assert result.evidence_gaps
+
+    assert result.next_investigation_steps
+
+    assert result.recommended_actions
+
+    assert result.uncertainty
+
+
+def test_llm_agent_uses_evidence_ids_from_controlled_input():
+    incident = make_incident()
+
+    context = IncidentContextBuilder().build(incident)
+
+    rag_result = IncidentRAGResult(
+        incident_id=incident.incident_id,
+        query="Brute Force investigation",
+        results=[],
     )
 
+    investigation = InvestigationResult(
+        incident_id=incident.incident_id,
+        summary="Observed brute force activity.",
+        threat_assessment="High",
+        attack_families=["Brute Force"],
+        confidence=0.90,
+    )
 
-def test_agent_returns_only_structured_output():
     agent = LLMInvestigationAgent(
-        provider=MockLLMProvider()
+        provider=MockLLMProvider(),
     )
 
     result = agent.investigate(
-        context=build_context(),
-        investigation=build_investigation(),
-        rag_result=build_rag_result(),
+        context=context,
+        investigation=investigation,
+        rag_result=rag_result,
     )
 
-    assert result.incident_id == "INC-TEST-001"
-
-    assert hasattr(
+    assert isinstance(
         result,
-        "recommended_actions",
+        LLMInvestigationOutput,
     )
 
-    assert hasattr(
-        result,
-        "next_investigation_steps",
+    assert result.incident_id == incident.incident_id
+
+    assert len(result.hypotheses) == 1
+
+    # No raw traffic or arbitrary event objects are passed
+    # directly to the provider output.
+    assert isinstance(
+        result.hypotheses[0].supporting_evidence_ids,
+        list,
     )
 
-    assert hasattr(
-        result,
-        "evidence_gaps",
+
+def test_llm_agent_preserves_identified_mitre_techniques():
+    incident = make_incident()
+
+    context = IncidentContextBuilder().build(incident)
+
+    rag_result = IncidentRAGResult(
+        incident_id=incident.incident_id,
+        query="Brute Force investigation",
+        results=[],
     )
 
-    assert not hasattr(
-        result,
-        "execute_actions",
+    investigation = InvestigationResult(
+        incident_id=incident.incident_id,
+        summary="Brute force behavior observed.",
+        threat_assessment="High",
+        attack_families=["Brute Force"],
+        confidence=0.90,
+        mitre_techniques=[],
     )
+
+    agent = LLMInvestigationAgent(
+        provider=MockLLMProvider(),
+    )
+
+    result = agent.investigate(
+        context=context,
+        investigation=investigation,
+        rag_result=rag_result,
+    )
+
+    assert result.technique_assessments == []

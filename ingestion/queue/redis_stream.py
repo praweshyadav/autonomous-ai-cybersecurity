@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Any, Iterator
 
 import redis
@@ -14,9 +15,28 @@ class RedisEventQueue:
 
     def __init__(
         self,
-        redis_url: str = "redis://localhost:6379/0",
-        stream_name: str = "security_events",
+        redis_url: str | None = None,
+        stream_name: str | None = None,
     ) -> None:
+        redis_url = (
+            redis_url
+            if redis_url is not None
+            else os.getenv("REDIS_URL")
+        )
+
+        stream_name = (
+            stream_name
+            if stream_name is not None
+            else os.getenv(
+                "REDIS_STREAM_NAME",
+                "security_events",
+            )
+        )
+
+        if not redis_url:
+            raise RuntimeError(
+                "REDIS_URL environment variable is not configured."
+            )
         if not isinstance(redis_url, str) or not redis_url.strip():
             raise ValueError("redis_url must be a non-empty string.")
 

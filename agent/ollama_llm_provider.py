@@ -1,4 +1,5 @@
 import json
+import re
 from urllib import error, request
 
 from agent.llm_contract import (
@@ -161,33 +162,39 @@ class OllamaLLMProvider(LLMProvider):
         ]
 
         incident = {
-            "incident_id": investigation_input.incident_id,
-            "severity": investigation_input.severity,
-            "primary_attack_family": (
-                investigation_input.primary_attack_family
-            ),
-            "attack_families": (
-                investigation_input.attack_families
-            ),
-            "event_count": (
-                investigation_input.event_count
-            ),
-            "duration_seconds": (
-                investigation_input.duration_seconds
-            ),
-            "confidence": (
-                investigation_input.confidence
-            ),
-            "family_distribution": (
-                investigation_input.family_distribution
-            ),
-            "protocols": (
-                investigation_input.protocols
-            ),
-            "destination_ports": (
-                investigation_input.destination_ports
-            ),
-        }
+                    "incident_id": investigation_input.incident_id,
+                    "severity": investigation_input.severity,
+                    "primary_attack_family": (
+                        investigation_input.primary_attack_family
+                    ),
+                    "attack_families": (
+                        investigation_input.attack_families
+                    ),
+                    "event_count": (
+                        investigation_input.event_count
+                    ),
+                    "duration_seconds": (
+                        investigation_input.duration_seconds
+                    ),
+                    "confidence": (
+                        investigation_input.confidence
+                    ),
+                    "family_distribution": (
+                        investigation_input.family_distribution
+                    ),
+                    "protocols": (
+                        investigation_input.protocols
+                    ),
+                    "destination_ports": (
+                        investigation_input.destination_ports
+                    ),
+                    "source_ips": (
+                        investigation_input.source_ips
+                    ),
+                    "destination_ips": (
+                        investigation_input.destination_ips
+                    ),
+                }
 
         output_schema = {
             "incident_id": "string",
@@ -206,7 +213,7 @@ class OllamaLLMProvider(LLMProvider):
             "technique_assessments": [
                 {
                     "technique_id": "T1110",
-                    "technique_name": "string",
+                    "technique_name": "T1110 - Brute Force",
                     "assessment": "string",
                     "supporting_evidence_ids": [
                         "E001"
@@ -244,10 +251,26 @@ class OllamaLLMProvider(LLMProvider):
             "commands, timestamps, or attack behavior.\n"
             "3. Treat hypotheses as hypotheses, not facts.\n"
             "4. Only assess MITRE techniques supplied above.\n"
-            "5. If evidence is insufficient, explicitly state "
-            "the evidence gap.\n"
-            "6. Do not execute or request execution of actions.\n"
-            "7. Return JSON matching this structure:\n"
+            "5. For every technique assessment, copy the "
+            "`technique_id` and `technique_name` EXACTLY from "
+            "the supplied MITRE ATT&CK techniques list.\n"
+            "   - `technique_id` and `technique_name` are separate fields.\n"
+            "   - Never combine them into one field.\n"
+            "   - If the supplied values are "
+            "`technique_id='T1110'` and "
+            "`technique_name='Brute Force'`, return exactly "
+            "`'T1110'` and `'Brute Force'`.\n"
+            "   - Do not return `'T1110 - Brute Force'` as the "
+            "`technique_name` unless that exact string was supplied "
+            "as the technique_name.\n"
+            "   - Do not shorten, rename, paraphrase, or modify either value.\n"
+            "6. Confidence values must reflect the strength of the "
+            "supplied evidence. Do not use 0.0 when the supplied "
+            "evidence supports the conclusion. Use a value between "
+            "0.0 and 1.0 that represents your evidence-based "
+            "assessment, not the confidence of the detection engine.\n"
+            "7. Do not execute or request execution of actions.\n"
+            "8. Return JSON matching this structure:\n"
             f"{json.dumps(output_schema, indent=2)}"
         )
 
@@ -356,6 +379,128 @@ class OllamaLLMProvider(LLMProvider):
             },
         )
 
+    # ==========================================================
+    # IP ADDRESS GROUNDING
+    # ==========================================================
+
+    @staticmethod
+    def _extract_ipv4_addresses(text: str) -> set[str]:
+        """
+        Extract IPv4 addresses from free-form text.
+        """
+
+        if not isinstance(text, str):
+            return set()
+
+        pattern = (
+            r"\b(?:"
+            r"(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)"
+            r"\.){3}"
+            r"(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)"
+            r"\b"
+        )
+
+        return set(
+            re.findall(
+                pattern,
+                text,
+            )
+        )
+
+    @classmethod
+    def _validate_ip_grounding(
+        cls,
+        data: dict,
+        investigation_input: LLMInvestigationInput,
+    ) -> None:
+        """
+        Reject IP addresses introduced by the LLM that were
+        not present in the supplied investigation input.
+        """
+
+        allowed_ips = set(
+            investigation_input.source_ips
+            + investigation_input.destination_ips
+        )
+
+        text_fields = [
+            data.get(
+                "summary",
+                "",
+            ),
+            data.get(
+                "threat_assessment",
+                "",
+            ),
+        ]
+
+        for hypothesis in data.get(
+            "hypotheses",
+            [],
+        ):
+            if isinstance(
+                hypothesis,
+                dict,
+            ):
+                text_fields.append(
+                    hypothesis.get(
+                        "hypothesis",
+                        "",
+                    )
+                )
+
+        for assessment in data.get(
+            "technique_assessments",
+            [],
+        ):
+            if isinstance(
+                assessment,
+                dict,
+            ):
+                text_fields.append(
+                    assessment.get(
+                        "assessment",
+                        "",
+                    )
+                )
+
+        for field in [
+            "evidence_gaps",
+            "next_investigation_steps",
+            "recommended_actions",
+            "uncertainty",
+        ]:
+            for value in data.get(
+                field,
+                [],
+            ):
+                if isinstance(
+                    value,
+                    str,
+                ):
+                    text_fields.append(value)
+
+        observed_ips = set()
+
+        for text in text_fields:
+            observed_ips.update(
+                cls._extract_ipv4_addresses(
+                    text
+                )
+            )
+
+        unknown_ips = (
+            observed_ips - allowed_ips
+        )
+
+        if unknown_ips:
+            raise ValueError(
+                "LLM introduced unsupported IP address(es): "
+                + ", ".join(
+                    sorted(unknown_ips)
+                )
+            )
+
     def _validate_output(
         self,
         data: dict,
@@ -368,13 +513,22 @@ class OllamaLLMProvider(LLMProvider):
         The LLM is treated as an untrusted component.
         It must never be allowed to introduce unknown
         evidence, MITRE techniques, invalid confidence values,
-        or malformed structures.
+        unsupported IP addresses, or malformed structures.
         """
 
         if not isinstance(data, dict):
             raise ValueError(
                 "LLM output must be a JSON object."
             )
+
+        # --------------------------------------------------
+        # IP grounding
+        # --------------------------------------------------
+
+        self._validate_ip_grounding(
+            data,
+            investigation_input,
+        )
 
         # --------------------------------------------------
         # Required top-level fields
@@ -443,6 +597,7 @@ class OllamaLLMProvider(LLMProvider):
                     0.0,
                 )
             )
+
         except (TypeError, ValueError) as exc:
             raise ValueError(
                 "LLM confidence must be a number."
@@ -563,6 +718,7 @@ class OllamaLLMProvider(LLMProvider):
                         0.0,
                     )
                 )
+
             except (TypeError, ValueError) as exc:
                 raise ValueError(
                     "Hypothesis confidence must be a number."
@@ -637,12 +793,17 @@ class OllamaLLMProvider(LLMProvider):
             ]
 
             if technique_name != expected_name:
-                raise ValueError(
-                    "LLM returned a mismatched MITRE "
-                    f"technique name for {technique_id}. "
-                    f"Expected '{expected_name}', "
-                    f"got '{technique_name}'."
+                prefixed_name = (
+                    f"{technique_id} - {expected_name}"
                 )
+
+                if technique_name != prefixed_name:
+                    raise ValueError(
+                        "LLM returned a mismatched MITRE "
+                        f"technique name for {technique_id}. "
+                        f"Expected '{expected_name}', "
+                        f"got '{technique_name}'."
+                    )
 
             if not isinstance(
                 item["assessment"],
@@ -681,6 +842,7 @@ class OllamaLLMProvider(LLMProvider):
                         0.0,
                     )
                 )
+
             except (TypeError, ValueError) as exc:
                 raise ValueError(
                     "MITRE technique confidence must "

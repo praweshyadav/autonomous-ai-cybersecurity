@@ -1,4 +1,4 @@
-from typing import Any
+﻿from typing import Any
 from uuid import uuid5, NAMESPACE_URL
 
 from qdrant_client import QdrantClient
@@ -9,31 +9,62 @@ from rag.documents.chunker import DocumentChunk
 
 class VectorStore:
     """
-    Local Qdrant vector store for cybersecurity knowledge.
+    Qdrant-backed vector store for cybersecurity knowledge.
 
-    The store uses persistent local Qdrant storage during the
-    current development phase.
+    Supports two modes:
 
-    IMPORTANT:
-    Local Qdrant uses a filesystem lock. Therefore the client
-    must be explicitly closed when the VectorStore is no longer
-    needed.
+    1. Local development/testing:
+       VectorStore(path="rag/index/qdrant")
+
+    2. Qdrant server:
+       VectorStore(url="http://localhost:6333")
+
+    Exactly one of `path` or `url` must be provided.
     """
 
     def __init__(
         self,
-        path: str = "rag/index/qdrant",
+        path: str | None = None,
+        url: str | None = None,
         collection_name: str = "cybersecurity_knowledge",
         vector_size: int = 384,
     ) -> None:
+        if path is not None and url is not None:
+            raise ValueError(
+                "Provide either path or url, not both."
+            )
+
+        if path is None and url is None:
+            raise ValueError(
+                "Either path or url must be provided."
+            )
+
+        if not isinstance(collection_name, str) or not collection_name.strip():
+            raise ValueError(
+                "collection_name must be a non-empty string."
+            )
+
+        if vector_size <= 0:
+            raise ValueError(
+                "vector_size must be greater than 0."
+            )
+
         self.path = path
+        self.url = url
         self.collection_name = collection_name
         self.vector_size = vector_size
         self._closed = False
 
-        self.client = QdrantClient(
-            path=self.path
-        )
+        if url is not None:
+            self.client = QdrantClient(
+                url=url
+            )
+            self.mode = "server"
+        else:
+            self.client = QdrantClient(
+                path=path
+            )
+            self.mode = "local"
 
         self._create_collection()
 
@@ -213,8 +244,10 @@ class VectorStore:
 
     def close(self) -> None:
         """
-        Close the underlying Qdrant client and release the
-        filesystem lock.
+        Close the underlying Qdrant client.
+
+        For local mode this releases the filesystem lock.
+        For server mode this closes the HTTP/gRPC client resources.
 
         Calling close() multiple times is safe.
         """
@@ -238,8 +271,7 @@ class VectorStore:
         traceback,
     ) -> None:
         """
-        Automatically release the Qdrant client when leaving
-        a context manager.
+        Automatically close the Qdrant client.
         """
         self.close()
 

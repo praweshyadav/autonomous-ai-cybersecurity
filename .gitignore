@@ -8,3 +8,5 @@ data/processed/
 detection/models/
 
 rag/index/qdrant/
+.env.*
+dashboard/.env.local

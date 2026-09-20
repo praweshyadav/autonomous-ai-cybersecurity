@@ -75,7 +75,7 @@ def test_real_cic_ids_detection_to_correlation():
 
     dataframe = pd.read_csv(
         DATA_PATH,
-        nrows=5_000,
+        nrows=50_000,
     )
 
     handler = load_handler()
@@ -99,7 +99,7 @@ def test_real_cic_ids_detection_to_correlation():
 
         events.append(event)
 
-    assert len(events) == 5_000
+    assert len(events) == 50_000
 
     # ---------------------------------------------------------
     # 2. Run optimized batch detection
@@ -131,7 +131,7 @@ def test_real_cic_ids_detection_to_correlation():
     attack_events = [
         event
         for event in events
-        if event.binary_prediction == 1
+        if event.binary_prediction == 1 and event.attack_family != "Benign"
     ]
 
     assert attack_events

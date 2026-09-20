@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+import os
 
 from rag.embeddings import EmbeddingModel
 from rag.index.vector_store import VectorStore
@@ -25,23 +26,22 @@ class RAGQueryEngine:
     High-level interface for querying the cybersecurity
     knowledge base.
 
-    Flow:
+    Qdrant connection modes:
 
-        Query
-          ↓
-        Embedding Model
-          ↓
-        Knowledge Retriever
-          ↓
-        Qdrant Vector Store
-          ↓
-        RAG Results
+    1. Server mode:
+       Uses QDRANT_URL from the environment.
+
+    2. Local mode:
+       qdrant_path="rag/index/qdrant"
+
+    Server mode is the default.
     """
 
     def __init__(
         self,
         collection_name: str = "mitre_attack",
-        qdrant_path: str = "rag/index/qdrant",
+        qdrant_url: str | None = None,
+        qdrant_path: str | None = None,
         embedding_model_name: str = (
             "sentence-transformers/all-MiniLM-L6-v2"
         ),
@@ -51,11 +51,29 @@ class RAGQueryEngine:
             model_name=embedding_model_name
         )
 
-        self.vector_store = VectorStore(
-            path=qdrant_path,
-            collection_name=collection_name,
-            vector_size=vector_size,
-        )
+        if qdrant_path is not None:
+            self.vector_store = VectorStore(
+                path=qdrant_path,
+                collection_name=collection_name,
+                vector_size=vector_size,
+            )
+        else:
+            qdrant_url = (
+                qdrant_url
+                if qdrant_url is not None
+                else os.getenv("QDRANT_URL")
+            )
+
+            if not qdrant_url:
+                raise RuntimeError(
+                    "QDRANT_URL environment variable is not configured."
+                )
+
+            self.vector_store = VectorStore(
+                url=qdrant_url,
+                collection_name=collection_name,
+                vector_size=vector_size,
+            )
 
         self.retriever = KnowledgeRetriever(
             vector_store=self.vector_store,
@@ -144,8 +162,7 @@ class RAGQueryEngine:
 
     def close(self) -> None:
         """
-        Close the underlying VectorStore and release
-        the local Qdrant filesystem lock.
+        Close the underlying VectorStore.
 
         Calling close() multiple times is safe.
         """
@@ -158,7 +175,7 @@ class RAGQueryEngine:
 
     def __enter__(self):
         """
-        Support usage with a context manager.
+        Support usage as a context manager.
         """
 
         if self._closed:
@@ -175,8 +192,7 @@ class RAGQueryEngine:
         traceback,
     ) -> None:
         """
-        Automatically close the Qdrant client when leaving
-        a context manager.
+        Automatically close the Qdrant client.
         """
 
         self.close()

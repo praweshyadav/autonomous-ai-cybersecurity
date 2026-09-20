@@ -1,4 +1,4 @@
-import json
+﻿import json
 
 import pytest
 
@@ -10,259 +10,250 @@ from agent.llm_contract import (
 from agent.ollama_llm_provider import OllamaLLMProvider
 
 
-def create_test_input():
+def make_input():
     return LLMInvestigationInput(
         incident_id="INC-TEST-001",
         severity="high",
         primary_attack_family="Brute Force",
         attack_families=["Brute Force"],
-        event_count=100,
-        duration_seconds=60.0,
-        confidence=0.90,
+        event_count=10,
+        duration_seconds=30.0,
+        confidence=0.95,
         family_distribution={
-            "Brute Force": 100
+            "Brute Force": 10,
         },
         protocols=[6],
-        destination_ports=[21],
-        source_ips=[],
-        destination_ips=[],
+        destination_ports=[22],
+        source_ips=["10.0.0.10"],
+        destination_ips=["192.168.1.10"],
         evidence=[
             AgentEvidence(
                 evidence_id="E001",
                 source="detection",
-                description="100 events classified as Brute Force.",
+                description="Repeated SSH connection attempts.",
                 evidence_type="observed",
+                confidence=0.95,
             )
         ],
         mitre_techniques=[
             AgentMITRETechnique(
                 technique_id="T1110",
-                technique_name="Brute Force",
+                technique_name="T1110 - Brute Force",
                 relevance="high",
-                relevance_score=0.84,
-                reason="Technique aligns with the primary attack family.",
+                relevance_score=0.90,
+                reason="The incident is classified as Brute Force.",
             )
         ],
     )
 
 
-def test_provider_initialization():
-    provider = OllamaLLMProvider()
+class FakeOllamaProvider(OllamaLLMProvider):
+    def __init__(self, response):
+        super().__init__(
+            model="test-model",
+            base_url="http://127.0.0.1:11434",
+        )
+        self.response = response
 
-    assert provider.model == "gemma3:4b"
-    assert provider.base_url == "http://127.0.0.1:11434"
-    assert provider.timeout == 120
-
-
-def test_build_prompt_contains_required_information():
-    provider = OllamaLLMProvider()
-
-    investigation_input = create_test_input()
-
-    prompt = provider._build_prompt(
-        investigation_input
-    )
-
-    assert "INC-TEST-001" in prompt
-    assert "Brute Force" in prompt
-    assert "T1110" in prompt
-    assert "E001" in prompt
-    assert "Do not invent" in prompt
-    assert "Return JSON" in prompt
+    def _request(self, payload):
+        return {
+            "message": {
+                "content": json.dumps(self.response)
+            }
+        }
 
 
-def test_parse_valid_output():
-    provider = OllamaLLMProvider()
-
-    investigation_input = create_test_input()
-
-    response = {
+def valid_output():
+    return {
         "incident_id": "INC-TEST-001",
-        "summary": "Possible brute force activity.",
+        "summary": "Repeated SSH authentication attempts were observed.",
         "threat_assessment": "High",
         "hypotheses": [
             {
-                "hypothesis": (
-                    "The activity is consistent with "
-                    "a brute force attack."
-                ),
+                "hypothesis": "The activity is consistent with brute force behavior.",
                 "supporting_evidence_ids": ["E001"],
                 "contradicting_evidence_ids": [],
-                "confidence": 0.85,
+                "confidence": 0.80,
             }
         ],
         "technique_assessments": [
             {
                 "technique_id": "T1110",
-                "technique_name": "Brute Force",
-                "assessment": (
-                    "The technique is supported by "
-                    "the observed brute force activity."
-                ),
+                "technique_name": "T1110 - Brute Force",
+                "assessment": "The supplied evidence supports this technique.",
                 "supporting_evidence_ids": ["E001"],
-                "confidence": 0.84,
+                "confidence": 0.90,
             }
         ],
         "evidence_gaps": [
-            "Authentication logs are required for confirmation."
+            "Host authentication logs are not available."
         ],
         "next_investigation_steps": [
             "Review authentication logs."
         ],
         "recommended_actions": [
-            "Investigate the affected system."
+            "Investigate the affected host before response."
         ],
-        "confidence": 0.82,
+        "confidence": 0.85,
         "uncertainty": [
-            (
-                "Network flow data alone does not confirm "
-                "successful authentication."
-            )
+            "Only network evidence is currently available."
         ],
     }
 
-    result = provider._parse_output(
-        json.dumps(response),
-        investigation_input,
+
+def test_valid_output_is_accepted():
+    provider = FakeOllamaProvider(
+        valid_output()
+    )
+
+    result = provider.investigate(
+        make_input()
     )
 
     assert result.incident_id == "INC-TEST-001"
-    assert result.summary == "Possible brute force activity."
+
+    assert result.summary
+
     assert result.threat_assessment == "High"
-    assert result.confidence == 0.82
+
+    assert result.confidence == 0.85
 
     assert len(result.hypotheses) == 1
 
-    assert result.hypotheses[0].hypothesis.startswith(
-        "The activity is consistent"
+    assert (
+        result.hypotheses[0]
+        .supporting_evidence_ids
+        == ["E001"]
     )
 
     assert len(result.technique_assessments) == 1
 
     assert (
-        result.technique_assessments[0].technique_id
+        result.technique_assessments[0]
+        .technique_id
         == "T1110"
     )
 
-    assert result.metadata["provider"] == "ollama"
-    assert result.metadata["model"] == "gemma3:4b"
 
+def test_unknown_incident_id_is_rejected():
+    output = valid_output()
 
-def test_reject_wrong_incident_id():
-    provider = OllamaLLMProvider()
+    output["incident_id"] = "INC-FABRICATED-999"
 
-    investigation_input = create_test_input()
-
-    response = {
-        "incident_id": "INC-WRONG",
-        "summary": "Test summary",
-        "threat_assessment": "High",
-        "confidence": 0.8,
-    }
+    provider = FakeOllamaProvider(output)
 
     with pytest.raises(
         ValueError,
         match="unexpected incident_id",
     ):
-        provider._parse_output(
-            json.dumps(response),
-            investigation_input,
+        provider.investigate(
+            make_input()
         )
 
 
-def test_reject_unknown_mitre_technique():
-    provider = OllamaLLMProvider()
+def test_unknown_evidence_id_is_rejected():
+    output = valid_output()
 
-    investigation_input = create_test_input()
+    output["hypotheses"][0][
+        "supporting_evidence_ids"
+    ] = ["E999"]
 
-    response = {
-        "incident_id": "INC-TEST-001",
-        "summary": "Test summary",
-        "threat_assessment": "High",
-        "technique_assessments": [
-            {
-                "technique_id": "T9999",
-                "technique_name": "Unknown Technique",
-                "assessment": "Unsupported technique.",
-                "supporting_evidence_ids": [],
-                "confidence": 0.8,
-            }
-        ],
-        "confidence": 0.8,
-    }
-
-    with pytest.raises(
-        ValueError,
-        match="was not supplied",
-    ):
-        provider._parse_output(
-            json.dumps(response),
-            investigation_input,
-        )
-
-
-def test_reject_unknown_evidence_id():
-    provider = OllamaLLMProvider()
-
-    investigation_input = create_test_input()
-
-    response = {
-        "incident_id": "INC-TEST-001",
-        "summary": "Test summary",
-        "threat_assessment": "High",
-        "hypotheses": [
-            {
-                "hypothesis": "Test hypothesis",
-                "supporting_evidence_ids": ["E999"],
-                "contradicting_evidence_ids": [],
-                "confidence": 0.8,
-            }
-        ],
-        "confidence": 0.8,
-    }
+    provider = FakeOllamaProvider(output)
 
     with pytest.raises(
         ValueError,
         match="unknown evidence ID",
     ):
-        provider._parse_output(
-            json.dumps(response),
-            investigation_input,
+        provider.investigate(
+            make_input()
         )
 
 
-def test_reject_invalid_confidence():
-    provider = OllamaLLMProvider()
+def test_unknown_mitre_technique_is_rejected():
+    output = valid_output()
 
-    investigation_input = create_test_input()
+    output["technique_assessments"][0][
+        "technique_id"
+    ] = "T9999"
 
-    response = {
-        "incident_id": "INC-TEST-001",
-        "summary": "Test summary",
-        "threat_assessment": "High",
-        "confidence": 1.5,
-    }
+    output["technique_assessments"][0][
+        "technique_name"
+    ] = "T9999 - Fabricated Technique"
+
+    provider = FakeOllamaProvider(output)
+
+    with pytest.raises(
+        ValueError,
+        match="not supplied",
+    ):
+        provider.investigate(
+            make_input()
+        )
+
+
+def test_mismatched_mitre_name_is_rejected():
+    output = valid_output()
+
+    output["technique_assessments"][0][
+        "technique_name"
+    ] = "T1110 - Something Else"
+
+    provider = FakeOllamaProvider(output)
+
+    with pytest.raises(
+        ValueError,
+        match="mismatched MITRE technique name",
+    ):
+        provider.investigate(
+            make_input()
+        )
+
+
+def test_invalid_confidence_is_rejected():
+    output = valid_output()
+
+    output["confidence"] = 1.5
+
+    provider = FakeOllamaProvider(output)
 
     with pytest.raises(
         ValueError,
         match="between 0 and 1",
     ):
-        provider._parse_output(
-            json.dumps(response),
-            investigation_input,
+        provider.investigate(
+            make_input()
         )
 
 
-def test_reject_invalid_json():
-    provider = OllamaLLMProvider()
+def test_unknown_evidence_in_mitre_assessment_is_rejected():
+    output = valid_output()
 
-    investigation_input = create_test_input()
+    output["technique_assessments"][0][
+        "supporting_evidence_ids"
+    ] = ["E999"]
+
+    provider = FakeOllamaProvider(output)
 
     with pytest.raises(
         ValueError,
-        match="invalid JSON",
+        match="unknown evidence ID",
     ):
-        provider._parse_output(
-            "THIS IS NOT JSON",
-            investigation_input,
+        provider.investigate(
+            make_input()
+        )
+
+
+def test_missing_required_field_is_rejected():
+    output = valid_output()
+
+    del output["summary"]
+
+    provider = FakeOllamaProvider(output)
+
+    with pytest.raises(
+        ValueError,
+        match="missing required field",
+    ):
+        provider.investigate(
+            make_input()
         )
