@@ -33,7 +33,7 @@ def _to_summary(incident) -> IncidentSummary:
         severity=incident.severity,
         primary_attack_family=incident.primary_attack_family or "Unknown",
         confidence=float(incident.confidence),
-        event_count=len(incident.events),
+        event_count=incident.event_count,
         source_ips=sorted(incident.src_ips),
         destination_ips=sorted(incident.dst_ips),
         destination_ports=sorted(incident.dst_ports),

@@ -57,6 +57,41 @@ def build_processor() -> RedisStreamProcessor:
     return processor
 
 
+def flush_incident_manager(
+    processor: RedisStreamProcessor,
+) -> None:
+    """Flush any buffered incidents before worker shutdown."""
+
+    incident_manager = processor.event_router._handlers.get(
+        "incident_manager"
+    )
+
+    if incident_manager is None:
+        return
+
+    flush = getattr(
+        incident_manager,
+        "flush",
+        None,
+    )
+
+    if not callable(flush):
+        return
+
+    incidents = flush()
+
+    if incidents:
+        print(
+            f"Flushed {len(incidents)} incident(s) before shutdown.",
+            flush=True,
+        )
+    else:
+        print(
+            "No buffered incidents to flush.",
+            flush=True,
+        )
+
+
 def main() -> None:
     """Continuously consume Redis events and route them through production processing."""
 
@@ -93,7 +128,17 @@ def main() -> None:
                 time.sleep(1.0)
 
     except KeyboardInterrupt:
-        print("\nRedis worker stopped.")
+        print(
+            "\nShutdown requested. Flushing buffered incidents...",
+            flush=True,
+        )
+
+        flush_incident_manager(processor)
+
+        print(
+            "Redis worker stopped.",
+            flush=True,
+        )
 
 
 if __name__ == "__main__":

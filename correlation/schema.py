@@ -85,6 +85,11 @@ class Incident:
         default_factory=list
     )
 
+    # Persisted event count.
+    # This remains available when incidents are reconstructed
+    # from PostgreSQL without loading individual event objects.
+    event_count: int = 0
+
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
 
@@ -128,6 +133,7 @@ class Incident:
         """
 
         self.events.append(event)
+        self.event_count = len(self.events)
 
         if (
             self.start_time is None

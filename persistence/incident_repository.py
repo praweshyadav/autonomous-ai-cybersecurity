@@ -193,6 +193,9 @@ class IncidentRepository:
             protocols=list(
                 protocols
             ),
+            event_count=int(
+                event_count
+            ),
         )
 
     def save(
