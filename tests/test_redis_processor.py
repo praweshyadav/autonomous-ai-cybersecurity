@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 import pytest
 
@@ -90,6 +90,7 @@ def test_processor_initializes():
     assert processor.consumer is consumer
     assert processor.event_router is router
     assert processor.deserializer is not None
+    assert processor.last_processed_message_id is None
 
     queue.clear()
 
@@ -107,6 +108,7 @@ def test_processor_returns_empty_when_no_events():
     result = processor.process_batch()
 
     assert result == []
+    assert processor.last_processed_message_id is None
 
     queue.clear()
 
@@ -114,7 +116,7 @@ def test_processor_returns_empty_when_no_events():
 def test_processor_deserializes_and_routes_event():
     (
         queue,
-        _,
+        consumer,
         router,
         processor,
     ) = create_processor(
@@ -152,13 +154,22 @@ def test_processor_deserializes_and_routes_event():
 
     assert received_events[0] is event
 
+    assert processor.last_processed_message_id is not None
+    assert consumer.last_id == "0-0"
+
+    consumer.acknowledge(
+        processor.last_processed_message_id
+    )
+
+    assert consumer.last_id == processor.last_processed_message_id
+
     queue.clear()
 
 
 def test_processor_handles_multiple_events():
     (
         queue,
-        _,
+        consumer,
         router,
         processor,
     ) = create_processor(
@@ -200,10 +211,19 @@ def test_processor_handles_multiple_events():
 
     assert len(received_events) == 3
 
+    assert processor.last_processed_message_id is not None
+    assert consumer.last_id == "0-0"
+
+    consumer.acknowledge(
+        processor.last_processed_message_id
+    )
+
+    assert consumer.last_id == processor.last_processed_message_id
+
     queue.clear()
 
 
-def test_processor_advances_consumer_position():
+def test_processor_advances_position_only_after_explicit_acknowledgement():
     (
         queue,
         consumer,
@@ -221,15 +241,27 @@ def test_processor_advances_consumer_position():
 
     assert len(first_result) == 1
 
-    first_position = consumer.last_id
+    processed_message_id = (
+        processor.last_processed_message_id
+    )
 
-    assert first_position != "0-0"
+    assert processed_message_id is not None
+
+    # Processor successfully processed the event,
+    # but consumer position is not advanced yet.
+    assert consumer.last_id == "0-0"
+
+    consumer.acknowledge(
+        processed_message_id
+    )
+
+    assert consumer.last_id == processed_message_id
 
     second_result = processor.process_batch()
 
     assert second_result == []
 
-    assert consumer.last_id == first_position
+    assert consumer.last_id == processed_message_id
 
     queue.clear()
 

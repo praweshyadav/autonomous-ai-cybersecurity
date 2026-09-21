@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 
 import pytest
 
@@ -74,6 +74,12 @@ def test_consumer_reads_single_event():
     assert message_id
     assert event_data["event_id"] == "consumer-001"
 
+    # Reading does not acknowledge the message.
+    assert consumer.last_id == "0-0"
+
+    # Explicit acknowledgement advances the position.
+    consumer.acknowledge(message_id)
+
     assert consumer.last_id == message_id
 
     queue.clear()
@@ -111,12 +117,16 @@ def test_consumer_reads_multiple_events_in_order():
         "consumer-003",
     ]
 
+    assert consumer.last_id == "0-0"
+
+    consumer.acknowledge(messages[-1][0])
+
     assert consumer.last_id == messages[-1][0]
 
     queue.clear()
 
 
-def test_consumer_does_not_read_same_events_twice():
+def test_consumer_does_not_read_same_events_twice_after_acknowledgement():
     queue = RedisEventQueue(
         stream_name="test_consumer_no_duplicates"
     )
@@ -133,6 +143,10 @@ def test_consumer_does_not_read_same_events_twice():
 
     assert len(first_batch) == 1
 
+    message_id = first_batch[-1][0]
+
+    consumer.acknowledge(message_id)
+
     second_batch = consumer.read_batch(count=10)
 
     assert second_batch == []
@@ -140,7 +154,33 @@ def test_consumer_does_not_read_same_events_twice():
     queue.clear()
 
 
-def test_consumer_reads_only_events_after_last_id():
+def test_consumer_replays_unacknowledged_events():
+    queue = RedisEventQueue(
+        stream_name="test_consumer_replay"
+    )
+
+    queue.clear()
+
+    queue.publish(
+        create_event("consumer-001")
+    )
+
+    consumer = RedisStreamConsumer(queue)
+
+    first_batch = consumer.read_batch(count=10)
+
+    assert len(first_batch) == 1
+
+    # Simulate processing failure before acknowledgement.
+    second_batch = consumer.read_batch(count=10)
+
+    assert len(second_batch) == 1
+    assert second_batch[0][1]["event_id"] == "consumer-001"
+
+    queue.clear()
+
+
+def test_consumer_reads_only_events_after_acknowledged_id():
     queue = RedisEventQueue(
         stream_name="test_consumer_incremental"
     )
@@ -158,6 +198,10 @@ def test_consumer_reads_only_events_after_last_id():
     assert len(first_batch) == 1
     assert first_batch[0][1]["event_id"] == "consumer-001"
 
+    first_message_id = first_batch[0][0]
+
+    consumer.acknowledge(first_message_id)
+
     queue.publish(
         create_event("consumer-002")
     )
@@ -166,6 +210,22 @@ def test_consumer_reads_only_events_after_last_id():
 
     assert len(second_batch) == 1
     assert second_batch[0][1]["event_id"] == "consumer-002"
+
+    queue.clear()
+
+
+def test_consumer_rejects_invalid_acknowledgement():
+    queue = RedisEventQueue(
+        stream_name="test_consumer_ack_validation"
+    )
+
+    consumer = RedisStreamConsumer(queue)
+
+    with pytest.raises(ValueError):
+        consumer.acknowledge("")
+
+    with pytest.raises(ValueError):
+        consumer.acknowledge(None)
 
     queue.clear()
 
@@ -186,6 +246,9 @@ def test_consumer_reset():
     first_batch = consumer.read_batch()
 
     assert len(first_batch) == 1
+
+    consumer.acknowledge(first_batch[0][0])
+
     assert consumer.last_id != "0-0"
 
     consumer.reset()
