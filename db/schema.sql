@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_incidents_created_at
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS security_events (
-    event_id UUID PRIMARY KEY,
+    event_id VARCHAR(100) PRIMARY KEY,
 
     timestamp TIMESTAMPTZ NOT NULL,
 
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS security_events (
 CREATE TABLE IF NOT EXISTS incident_events (
     incident_id VARCHAR(50) NOT NULL,
 
-    event_id UUID NOT NULL,
+    event_id VARCHAR(100) NOT NULL,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 

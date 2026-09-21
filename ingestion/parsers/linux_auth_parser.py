@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 
 class LinuxAuthParser:
@@ -16,6 +17,8 @@ class LinuxAuthParser:
     The parser only extracts and normalizes information.
     It does not perform threat detection.
     """
+
+    SYSLOG_TIMEZONE = ZoneInfo("Asia/Kolkata")
 
     FAILED_PASSWORD_PATTERN = re.compile(
         r"(?P<process>sshd)\[(?P<pid>\d+)\]: "
@@ -219,14 +222,15 @@ class LinuxAuthParser:
             "raw_log": line,
         }
 
-    @staticmethod
+    @classmethod
     def _parse_syslog_timestamp(
+        cls,
         line: str,
         year: int | None = None,
     ) -> datetime:
 
         if year is None:
-            year = datetime.now().year
+            year = datetime.now(cls.SYSLOG_TIMEZONE).year
 
         match = re.match(
             r"^(?P<month>[A-Z][a-z]{2}) "
@@ -248,9 +252,13 @@ class LinuxAuthParser:
         )
 
         try:
-            return datetime.strptime(
+            timestamp = datetime.strptime(
                 timestamp_string,
                 "%Y %b %d %H:%M:%S",
+            )
+
+            return timestamp.replace(
+                tzinfo=cls.SYSLOG_TIMEZONE
             )
 
         except ValueError as exc:

@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from correlation.schema import SecurityEvent
 from ingestion.normalizer import SecurityEventNormalizer
@@ -37,6 +38,7 @@ def test_linux_auth_parser_to_security_event():
         10,
         30,
         15,
+        tzinfo=ZoneInfo("Asia/Kolkata"),
     )
 
     assert event.src_ip == "192.168.1.50"

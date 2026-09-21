@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -21,7 +22,13 @@ def test_failed_password(parser):
 
     assert event is not None
     assert event["timestamp"] == datetime(
-        2018, 2, 14, 10, 30, 15
+        2018,
+        2,
+        14,
+        10,
+        30,
+        15,
+        tzinfo=ZoneInfo("Asia/Kolkata"),
     )
     assert event["src_ip"] == "192.168.1.50"
     assert event["src_port"] == 54321
