@@ -7,21 +7,28 @@ class RedisStreamConsumer:
     """
     Consumes events from a Redis Stream.
 
-    This class is responsible only for reading events from Redis.
-    Processing, detection, and correlation will be connected later.
+    The consumer position can be restored from a persisted
+    Redis Stream ID so worker restarts do not replay events
+    that were already processed.
     """
 
     def __init__(
         self,
         queue: RedisEventQueue,
+        start_id: str = "0-0",
     ) -> None:
         if not isinstance(queue, RedisEventQueue):
             raise TypeError(
                 "queue must be a RedisEventQueue."
             )
 
+        if not isinstance(start_id, str) or not start_id:
+            raise ValueError(
+                "start_id must be a non-empty string."
+            )
+
         self.queue = queue
-        self.last_id = "0-0"
+        self.last_id = start_id
 
     def read_batch(
         self,
@@ -41,10 +48,22 @@ class RedisStreamConsumer:
             count=count,
         )
 
-        if messages:
-            self.last_id = messages[-1][0]
-
         return messages
+
+    def acknowledge(
+        self,
+        message_id: str,
+    ) -> None:
+        """
+        Advance the consumer position after successful processing.
+        """
+
+        if not isinstance(message_id, str) or not message_id:
+            raise ValueError(
+                "message_id must be a non-empty string."
+            )
+
+        self.last_id = message_id
 
     def reset(self) -> None:
         """

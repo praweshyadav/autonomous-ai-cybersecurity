@@ -13,15 +13,15 @@ class RedisStreamProcessor:
     Flow:
 
         Redis Stream
-             ↓
+             ?
         RedisStreamConsumer
-             ↓
+             ?
         SecurityEventDeserializer
-             ↓
+             ?
         SecurityEvent
-             ↓
+             ?
         EventRouter
-             ↓
+             ?
         Detection / Correlation / Other handlers
     """
 
@@ -63,6 +63,8 @@ class RedisStreamProcessor:
             else SecurityEventDeserializer()
         )
 
+        self.last_processed_message_id: str | None = None
+
     def process_batch(
         self,
         count: int = 10,
@@ -71,7 +73,8 @@ class RedisStreamProcessor:
         Consume a batch of Redis events, deserialize them,
         and route them through the EventRouter.
 
-        Returns the SecurityEvents that were processed.
+        The Redis message ID is recorded only after the
+        complete batch has been successfully routed.
         """
 
         messages = self.consumer.read_batch(
@@ -91,5 +94,7 @@ class RedisStreamProcessor:
         )
 
         self.event_router.route_batch(events)
+
+        self.last_processed_message_id = messages[-1][0]
 
         return events

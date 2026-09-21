@@ -10,3 +10,4 @@ detection/models/
 rag/index/qdrant/
 .env.*
 dashboard/.env.local
+data/runtime/
