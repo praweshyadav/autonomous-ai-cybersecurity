@@ -19,7 +19,6 @@ COPY ingestion/ ingestion/
 COPY knowledge_graph/ knowledge_graph/
 COPY persistence/ persistence/
 COPY rag/ rag/
-COPY response/ response/
 
 COPY detection/models/ detection/models/
 

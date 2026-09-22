@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = process.env.API_BASE_URL;
 
 export async function GET() {
   const apiKey = process.env.API_KEY;
