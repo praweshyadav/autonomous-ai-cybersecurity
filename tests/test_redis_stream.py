@@ -30,7 +30,7 @@ def test_queue_requires_valid_stream_name():
 def test_queue_initializes():
     queue = RedisEventQueue()
 
-    assert queue.redis_url == "redis://localhost:6379/0"
+    assert queue.redis_url == "redis://127.0.0.1:6379/0"
     assert queue.stream_name == "security_events"
 
 

@@ -275,6 +275,10 @@ def test_redis_batches_share_same_incident_window():
     assert len(processed_first) == 3
     assert incident_manager.buffered_event_count == 3
 
+    processor.consumer.acknowledge(
+        processor.last_processed_message_id
+    )
+
     queue.publish_batch(second_batch)
 
     processed_second = processor.process_batch(
@@ -337,6 +341,10 @@ def test_redis_event_outside_window_flushes_previous_incident():
 
     assert len(processed_first) == 2
     assert incident_manager.buffered_event_count == 2
+
+    processor.consumer.acknowledge(
+        processor.last_processed_message_id
+    )
 
     second_batch = [
         create_event(
