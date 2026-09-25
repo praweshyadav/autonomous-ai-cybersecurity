@@ -1,0 +1,13 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+
+data/raw/
+data/processed/
+detection/models/
+
+rag/index/qdrant/
+.env.*
+dashboard/.env.local
+data/runtime/

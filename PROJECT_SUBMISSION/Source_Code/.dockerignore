@@ -1,0 +1,15 @@
+.venv/
+.venv_requirements_test/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.env
+.env.*
+dashboard/
+data/raw/
+data/processed/
+notebooks/
+tests/
+*.log
+*.bak
