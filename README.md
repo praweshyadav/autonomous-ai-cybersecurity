@@ -94,77 +94,80 @@ Monitor the platform using Prometheus and Grafana.
 
 Package the infrastructure using Docker.
 
-4. End-to-End Workflow
+flowchart TD
 
-┌──────────────────────────────┐
-│  Authorized Security Sources │
-│ Linux / Windows / Network /  │
-│ Web / Approved Telemetry     │
-└──────────────┬───────────────┘
-               ↓
-┌──────────────────────────────┐
-│ Ingestion & Normalization    │
-│ Parsers / Collectors         │
-└──────────────┬───────────────┘
-               ↓
-┌──────────────────────────────┐
-│ Redis Streams                │
-│ Event processing + checkpoint│
-└──────────────┬───────────────┘
-               ↓
-┌──────────────────────────────┐
-│ ML Threat Detection          │
-│ XGBoost / Isolation Forest   │
-└──────────────┬───────────────┘
-               ↓
-┌──────────────────────────────┐
-│ Incident Correlation         │
-│ Group related events         │
-└──────────────┬───────────────┘
-               ↓
-      ┌────────┴─────────┐
-      ↓                  ↓
-┌───────────────┐  ┌───────────────┐
-│ PostgreSQL    │  │ Neo4j         │
-│ Incidents     │  │ Relationships │
-│ Events/Audit  │  │ Knowledge     │
-└───────┬───────┘  └───────┬───────┘
-        └──────────┬────────┘
-                   ↓
-┌──────────────────────────────┐
-│ RAG / Qdrant / MITRE ATT&CK │
-│ Evidence & context retrieval │
-└──────────────┬───────────────┘
-               ↓
-┌──────────────────────────────┐
-│ AI Investigation             │
-│ LangGraph / LLM reasoning    │
-└──────────────┬───────────────┘
-               ↓
-┌──────────────────────────────┐
-│ Evidence / Grounding Check   │
-└──────────────┬───────────────┘
-               ↓
-┌──────────────────────────────┐
-│ Response Policy              │
-│ Allowlisted actions          │
-└──────────────┬───────────────┘
-               ↓
-      ┌────────┴─────────┐
-      ↓                  ↓
- Low-risk action    Medium/High-risk
- if permitted       Human approval
-      └────────┬─────────┘
-               ↓
-┌──────────────────────────────┐
-│ Audit + Prometheus/Grafana   │
-└──────────────┬───────────────┘
-               ↓
-┌──────────────────────────────┐
-│ FastAPI Backend              │
-│        +                     │
-│ Next.js / React Dashboard    │
-└──────────────────────────────┘
+    A["🔐 Authorized Security Sources<br/>Linux • Windows • Network • Web"]
+    B["📥 Ingestion & Normalization<br/>Collectors • Parsers"]
+    C["⚡ Redis Streams<br/>Event Processing • Checkpoints"]
+    D["🤖 ML Threat Detection<br/>XGBoost • Isolation Forest"]
+    E["🔗 Incident Correlation<br/>Group Related Events"]
+
+    F["🗄️ PostgreSQL<br/>Incidents • Events • Audit"]
+    G["🕸️ Neo4j Knowledge Graph<br/>Security Relationships"]
+
+    H["🔎 RAG & Knowledge Retrieval<br/>Qdrant • MITRE ATT&CK"]
+    I["🧠 AI Investigation<br/>LangGraph • LLM Reasoning"]
+    J["✅ Evidence & Grounding Validation"]
+
+    K["🛡️ Response Policy<br/>Allowlisted Actions"]
+    L{"⚠️ Risk / Approval Gate"}
+
+    M["▶️ Low-Risk Action<br/>Policy Permitted"]
+    N["👤 Human Approval<br/>Medium / High Risk"]
+    O["⛔ Reject / Deny<br/>Unknown or Unapproved Action"]
+
+    P["📋 Audit & Monitoring<br/>Audit Logs • Prometheus • Grafana"]
+    Q["🚀 FastAPI Backend<br/>Authenticated REST API"]
+    R["🖥️ Next.js / React Dashboard<br/>Security Operations UI"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+
+    E --> F
+    E --> G
+
+    F --> H
+    G --> H
+
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+
+    L -->|Low Risk| M
+    L -->|Medium / High Risk| N
+    L -->|Unknown / Not Allowed| O
+
+    N -->|Approved| M
+    N -->|Rejected| O
+
+    M --> P
+    O --> P
+
+    P --> Q
+    Q --> R
+
+    classDef source fill:#E3F2FD,stroke:#1976D2,color:#0D47A1,stroke-width:2px;
+    classDef processing fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:2px;
+    classDef ml fill:#FFF3E0,stroke:#EF6C00,color:#E65100,stroke-width:2px;
+    classDef storage fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C,stroke-width:2px;
+    classDef ai fill:#EDE7F6,stroke:#5E35B1,color:#311B92,stroke-width:2px;
+    classDef security fill:#E0F7FA,stroke:#00838F,color:#004D40,stroke-width:2px;
+    classDef approval fill:#FFF8E1,stroke:#F9A825,color:#5D4037,stroke-width:2px;
+    classDef danger fill:#FFEBEE,stroke:#C62828,color:#B71C1C,stroke-width:2px;
+    classDef output fill:#E8EAF6,stroke:#3949AB,color:#1A237E,stroke-width:2px;
+
+    class A source;
+    class B,C processing;
+    class D,E ml;
+    class F,G storage;
+    class H,I,J ai;
+    class K,L,M security;
+    class N approval;
+    class O danger;
+    class P,Q,R output;
 
 5. System Architecture
 
