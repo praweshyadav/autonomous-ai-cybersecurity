@@ -21,6 +21,10 @@ persistence access,
 
 metrics exposure,
 
+Live Dashboard
+
+https://autonomous-ai-cybersecurity.vercel.app
+
 dashboard backend integration.
 
 Live Backend
