@@ -1,274 +1,266 @@
 Autonomous AI Cybersecurity Analyst & Incident Response Agent
 
-An AI-assisted cybersecurity platform for continuous security-event
-ingestion, ML-based attack detection, incident correlation,
-evidence-grounded investigation, and controlled incident response.
+An end-to-end defensive cybersecurity platform that combines
+security-event ingestion, machine-learning detection, incident
+correlation, RAG-based evidence retrieval, AI-assisted investigation,
+controlled response planning, auditability, and operational
+monitoring.
 
-The system is designed around a clear separation between
-machine-learning detection and LLM-based
-investigation/reasoning. Response actions are policy-controlled,
-allowlisted, auditable, and subject to human approval for medium- and
-high-risk actions.
 
-Project Links
 
-GitHub Repository:
-https://github.com/praweshyadav/autonomous-ai-cybersecurity
 
-Developer GitHub: https://github.com/praweshyadav
 
-Live Dashboard: https://autonomous-ai-cybersecurity.vercel.app
 
-Backend API: https://autonomous-ai-cybersecurity-1.onrender.com
+1. Project Overview
 
-API Health:
-https://autonomous-ai-cybersecurity-1.onrender.com/health
+The Autonomous AI Cybersecurity Analyst & Incident Response Agent is
+a production-oriented cybersecurity platform designed to process
+authorized security telemetry, detect suspicious activity, correlate
+related events into incidents, retrieve relevant cybersecurity
+knowledge, investigate incidents using grounded AI, and plan controlled
+response actions.
 
-API Documentation:
-https://autonomous-ai-cybersecurity-1.onrender.com/docs
+The architecture deliberately separates:
 
-Prometheus Metrics:
-https://autonomous-ai-cybersecurity-1.onrender.com/metrics
+Numerical / ML Detection
+          ↓
+Incident Correlation
+          ↓
+Evidence Retrieval
+          ↓
+AI Investigation & Reasoning
+          ↓
+Policy-Controlled Response
+          ↓
+Audit & Monitoring
 
-Note: Some API endpoints require Bearer-token authentication.
+The LLM is used for investigation and reasoning; it is not treated as a
+replacement for the numerical detection layer.
 
-Overview
+2. Problem Statement
 
-Traditional security monitoring systems can generate large numbers of
-alerts without automatically connecting related events, retrieving
-relevant security knowledge, or producing evidence-backed investigation
-results.
+Modern security environments generate large volumes of logs, alerts, and
+network events. Looking at individual alerts independently can make it
+difficult to understand:
 
-This project combines:
+which events belong to the same incident,
 
-Security-event ingestion and normalization
+what attack technique may be involved,
 
-Redis Streams for event processing
+what evidence supports an investigation,
 
-Machine-learning attack detection
+what response action is appropriate,
 
-Incident correlation
+and how the complete incident lifecycle should be audited.
 
-PostgreSQL persistence
+This project addresses these problems by connecting event ingestion, ML
+detection, incident correlation, databases, RAG, knowledge graphs, AI
+investigation, response policy, and security monitoring into one
+workflow.
 
-Neo4j knowledge-graph relationships
+3. Main Objectives
 
-Qdrant vector retrieval
+Collect and normalize authorized security events.
 
-MITRE ATT&CK knowledge
+Stream events through Redis.
 
-RAG-based investigation
+Detect suspicious activity using ML models.
 
-LLM-assisted security analysis
+Correlate related detections into incidents.
 
-Evidence and grounding validation
+Store structured incident/event information in PostgreSQL.
 
-Policy-controlled response planning
+Represent investigation relationships in Neo4j.
 
-Human approval for higher-risk actions
+Retrieve cybersecurity knowledge using Qdrant and RAG.
 
-FastAPI backend
+Integrate MITRE ATT&CK context.
 
-Next.js/React dashboard
+Use AI/LLM reasoning for evidence-grounded investigation.
 
-Prometheus/Grafana monitoring
+Validate evidence before response planning.
 
-Docker-based local infrastructure
+Restrict response actions through explicit policies.
 
-High-Level Architecture
+Require human approval for medium/high-risk actions.
+
+Maintain audit records.
+
+Expose the system through FastAPI.
+
+Provide a Next.js/React security dashboard.
+
+Monitor the platform using Prometheus and Grafana.
+
+Package the infrastructure using Docker.
+
+4. End-to-End Workflow
+
+┌──────────────────────────────┐
+│  Authorized Security Sources │
+│ Linux / Windows / Network /  │
+│ Web / Approved Telemetry     │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│ Ingestion & Normalization    │
+│ Parsers / Collectors         │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│ Redis Streams                │
+│ Event processing + checkpoint│
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│ ML Threat Detection          │
+│ XGBoost / Isolation Forest   │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│ Incident Correlation         │
+│ Group related events         │
+└──────────────┬───────────────┘
+               ↓
+      ┌────────┴─────────┐
+      ↓                  ↓
+┌───────────────┐  ┌───────────────┐
+│ PostgreSQL    │  │ Neo4j         │
+│ Incidents     │  │ Relationships │
+│ Events/Audit  │  │ Knowledge     │
+└───────┬───────┘  └───────┬───────┘
+        └──────────┬────────┘
+                   ↓
+┌──────────────────────────────┐
+│ RAG / Qdrant / MITRE ATT&CK │
+│ Evidence & context retrieval │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│ AI Investigation             │
+│ LangGraph / LLM reasoning    │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│ Evidence / Grounding Check   │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│ Response Policy              │
+│ Allowlisted actions          │
+└──────────────┬───────────────┘
+               ↓
+      ┌────────┴─────────┐
+      ↓                  ↓
+ Low-risk action    Medium/High-risk
+ if permitted       Human approval
+      └────────┬─────────┘
+               ↓
+┌──────────────────────────────┐
+│ Audit + Prometheus/Grafana   │
+└──────────────┬───────────────┘
+               ↓
+┌──────────────────────────────┐
+│ FastAPI Backend              │
+│        +                     │
+│ Next.js / React Dashboard    │
+└──────────────────────────────┘
+
+5. System Architecture
+
+Data and Event Layer
 
 Authorized Sources
-        │
-        ▼
-Ingestion & Normalization
-        │
-        ▼
-Redis Streams
-        │
-        ▼
-ML Detection
-        │
-        ▼
-Incident Correlation
-        │
-        ├──────────────► PostgreSQL
-        │
-        └──────────────► Neo4j
-                         │
-                         ▼
-                 RAG / Knowledge Graph
-                         │
-                         ▼
-                 AI Investigation
-                         │
-                         ▼
-                Evidence Validation
-                         │
-                         ▼
-                 Response Policy
-                         │
-                         ▼
-                  Approval Gate
-                         │
-                         ▼
-                 Audit & Monitoring
-                         │
-                         ▼
-              FastAPI + Next.js Dashboard
 
-Key Objectives
+The platform is intended for security telemetry from systems for which
+monitoring authorization exists.
 
-Detect suspicious or malicious security events using
-machine-learning models.
+Examples:
 
-Correlate related events into meaningful security incidents.
-
-Preserve incident and event relationships in structured databases.
-
-Retrieve relevant cybersecurity knowledge using RAG and a knowledge
-graph.
-
-Use an LLM for investigation and reasoning rather than replacing the
-numerical detection layer.
-
-Ground investigation results in retrieved evidence.
-
-Control response actions through an explicit policy layer.
-
-Require human approval for medium- and high-risk response actions.
-
-Maintain an auditable record of investigation and response activity.
-
-Provide API and dashboard access to security operations data.
-
-Core Workflow
-
-1. Authorized Data Sources
-
-The system accepts security telemetry from authorized sources such as:
-
-Linux logs
+Linux system logs
 
 Windows Event Logs
 
-Network/security telemetry
+Network/security events
 
 Web/server logs
 
-Other approved security-event sources
+Wazuh security alerts
 
-Only authorized monitoring sources should be connected to the system.
+Other approved sources
 
-2. Ingestion and Normalization
+Ingestion
 
-Collectors and parsers convert source-specific events into a normalized
-security-event format.
+The ingestion layer:
 
-This allows downstream components to process events consistently
-regardless of their original source.
+Receives source events.
 
-3. Redis Streams
+Parses source-specific formats.
 
-Normalized events are published to Redis Streams.
+Normalizes events.
 
-Redis provides the event-processing handoff between ingestion and
-downstream detection/correlation components.
+Publishes normalized events into Redis Streams.
 
-4. ML Detection
+Redis Streams
 
-Machine-learning models analyze numerical/network features to identify
-suspicious traffic and attack behavior.
+Redis provides the event-processing path between ingestion and
+downstream detection/correlation.
 
-The project uses the CSE-CIC-IDS2018 dataset for model development and
-evaluation.
+The project also uses a durable worker checkpoint so event processing
+can continue from the recorded position.
 
-5. Incident Correlation
+6. Wazuh Security Monitoring
 
-Related detections are grouped into incidents using event relationships,
-timestamps, source/destination information, attack families, confidence,
-and severity.
+Wazuh is integrated as a security monitoring and alerting component.
 
-6. Persistence
+It provides visibility into authorized security events and alerts and
+can act as an upstream security-event source for the broader platform.
 
-Incident and event information is stored in PostgreSQL.
+The overall relationship is:
 
-Neo4j is used to represent relationships useful for security
-investigation and knowledge-graph reasoning.
+Authorized Host
+      ↓
+Wazuh Agent / Monitoring
+      ↓
+Wazuh Manager
+      ↓
+Security Alert
+      ↓
+Ingestion / Normalization
+      ↓
+Redis Stream
+      ↓
+Detection / Correlation
 
-7. RAG and Knowledge Retrieval
+Wazuh is therefore part of the monitoring layer, while the ML/RAG/AI
+pipeline performs additional detection, correlation, investigation, and
+response orchestration.
 
-Relevant cybersecurity information is retrieved from the vector store
-and knowledge graph.
+7. Machine Learning Detection
 
-The project includes MITRE ATT&CK information to provide investigation
-context.
+The ML layer is responsible for numerical security-event detection.
 
-8. AI Investigation
+The project uses models including:
 
-The investigation layer uses retrieved evidence and incident context to
-produce:
+XGBoost
 
-Investigation findings
+Isolation Forest
 
-Attack context
+The detection pipeline is designed to identify suspicious
+network/security behavior before incidents are correlated and
+investigated.
 
-Relevant techniques
+Dataset
 
-Evidence-backed reasoning
+Model development and evaluation use the:
 
-Recommended response actions
+CSE-CIC-IDS2018 dataset
 
-The LLM is not treated as the primary numerical detector.
+The project uses file-aware dataset splitting for evaluation.
 
-9. Evidence Validation
+8. ML Metric Calculation & Evaluation
 
-Investigation results are checked against available evidence and
-retrieved context before response planning.
-
-10. Response Policy
-
-Response actions are evaluated through a policy layer.
-
-Allowlisted actions can be considered.
-
-Unknown actions are denied.
-
-Medium- and high-risk actions require human approval.
-
-Response activity is recorded for auditability.
-
-11. Dashboard and Monitoring
-
-The FastAPI backend exposes application APIs, while the Next.js
-dashboard provides an operational interface.
-
-Prometheus and Grafana provide monitoring and observability.
-
-Technology Stack
-
-Area                  Technology
-
-Language              Python
-Backend               FastAPI
-Frontend              Next.js, React
-ML                    Scikit-learn, XGBoost
-Deep Learning / AI    PyTorch, LLM providers
-RAG                   Qdrant, retrieval pipeline
-Knowledge Graph       Neo4j
-Database              PostgreSQL
-Event Streaming       Redis Streams
-Security Monitoring   Wazuh
-Monitoring            Prometheus, Grafana
-Containers            Docker
-Deployment            Render, Vercel
-Testing               Pytest
-Security Knowledge    MITRE ATT&CK
-Dataset               CSE-CIC-IDS2018
-
-Machine Learning Evaluation
-
-The evaluated detection pipeline achieved the following reported
-results:
+Reported evaluation results:
 
 Metric          Result
 
@@ -288,80 +280,230 @@ SQL Injection       0.9118
 
 Confusion matrix:
 
-[[1,048,202, 11],
- [50,          312]]
+                 Predicted
+                 Benign   Attack
+Actual Benign    1,048,202   11
+Actual Attack           50  312
 
-The evaluation uses file-aware dataset splitting to reduce leakage
-between training and evaluation data.
+The evaluation includes precision, recall, F1, ROC-AUC, PR-AUC,
+confusion-matrix analysis, and attack-family performance.
 
-RAG / Knowledge Retrieval
+9. Incident Correlation
 
-The project includes a cybersecurity knowledge-retrieval layer using:
+The correlation layer converts individual detections into higher-level
+incidents.
+
+Correlation considers information such as:
+
+timestamps,
+
+source IPs,
+
+destination IPs,
+
+destination ports,
+
+protocols,
+
+attack families,
+
+confidence,
+
+severity,
+
+related security events.
+
+This reduces the problem of treating every detection as an independent
+alert.
+
+10. PostgreSQL Persistence
+
+PostgreSQL stores structured application and security data.
+
+Examples include:
+
+incidents,
+
+incident events,
+
+security events,
+
+audit events,
+
+incident metadata,
+
+severity,
+
+confidence,
+
+attack-family distributions.
+
+PostgreSQL provides durable relational persistence for the application.
+
+11. Neo4j Knowledge Graph
+
+Neo4j represents relationships useful for investigation.
+
+The knowledge-graph layer can connect concepts such as:
+
+Incident
+   ↓
+Security Event
+   ↓
+Source / Destination
+   ↓
+Attack Family
+   ↓
+MITRE Technique
+   ↓
+Evidence / Context
+
+This complements relational persistence with graph-oriented
+relationships.
+
+12. RAG and Qdrant
+
+The RAG layer retrieves relevant cybersecurity knowledge for an
+investigation.
+
+Technology includes:
 
 Qdrant
 
-Embedding-based retrieval
+embeddings
 
-MITRE ATT&CK knowledge
+vector retrieval
 
-Knowledge-graph relationships
+MITRE ATT&CK information
 
-Incident context
+incident context
 
-The reported RAG index contains approximately:
+knowledge-graph relationships
 
-697 documents
+Reported RAG index:
 
-2,811 chunks/vectors
+~697 documents
+~2,811 chunks / vectors
 
-Retrieved context is used to ground the AI investigation.
+Retrieved knowledge is supplied as evidence/context for the AI
+investigation layer.
 
-Controlled End-to-End Test
+13. AI Investigation
 
-A controlled end-to-end test processed:
+The AI investigation layer uses the incident context and retrieved
+evidence to assist with:
 
-1,000 network flows
+incident interpretation,
+
+attack-technique identification,
+
+evidence analysis,
+
+investigation reasoning,
+
+recommended response actions.
+
+The project uses an agentic orchestration approach with LangGraph
+and LLM-based reasoning.
+
+Conceptually:
+
+Incident
+   ↓
+Context Builder
+   ↓
+Evidence Retrieval
+   ↓
+Knowledge / MITRE Context
+   ↓
+LLM Investigation
+   ↓
+Evidence Validation
+   ↓
+Investigation Result
+
+The AI layer is deliberately separated from the numerical ML detection
+layer.
+
+14. Evidence and Grounding Validation
+
+Before response planning, investigation output is checked against
+available evidence and retrieved context.
+
+The goal is to reduce unsupported conclusions and keep AI-generated
+investigation results tied to the security data available to the system.
+
+15. Response Policy & Human Approval
+
+The response layer does not allow arbitrary actions.
+
+It uses:
+
+explicit response policies,
+
+allowlisted actions,
+
+risk classification,
+
+human approval,
+
+audit logging.
+
+General flow:
+
+Investigation Result
         ↓
-Detection
+Response Recommendation
         ↓
-Correlation
+Policy Evaluation
         ↓
-3 incidents
-        ↓
-High-severity incident selected
-        ↓
-905 related events
-        ↓
-MITRE ATT&CK retrieval
-        ↓
-Grounded AI investigation
+ ┌──────┴────────┐
+ ↓               ↓
+Low Risk      Medium/High Risk
+ ↓               ↓
+Policy          Human Approval
+Permission          ↓
+ ↓              Approved?
+Execute          ↓      ↓
+              Yes      No
+               ↓       ↓
+             Execute  Reject
 
-The test demonstrates the intended flow from network events through
-detection, correlation, retrieval, and AI-assisted investigation.
+Unknown actions are denied.
 
-API
+16. FastAPI Backend
 
-The backend is implemented with FastAPI.
+FastAPI provides the application backend and API layer.
 
-Health Check
+Responsibilities include:
 
-GET /health
+health checks,
 
-Live endpoint:
+incident APIs,
+
+authentication,
+
+application services,
+
+persistence access,
+
+metrics exposure,
+
+dashboard backend integration.
+
+Live Backend
+
+https://autonomous-ai-cybersecurity-1.onrender.com
+
+Health
 
 https://autonomous-ai-cybersecurity-1.onrender.com/health
 
-API Documentation
-
-FastAPI Swagger documentation:
+Swagger API Documentation
 
 https://autonomous-ai-cybersecurity-1.onrender.com/docs
 
 Prometheus Metrics
-
-GET /metrics
-
-Live endpoint:
 
 https://autonomous-ai-cybersecurity-1.onrender.com/metrics
 
@@ -369,30 +511,183 @@ Protected Incidents API
 
 GET /api/v1/incidents
 
-Protected endpoints require a Bearer token.
+Protected endpoints require Bearer-token authentication.
 
-Dashboard
+17. Next.js / React Dashboard
 
-The project includes a Next.js/React dashboard for operational
-visibility.
+The frontend provides an operational interface for viewing security
+information.
 
-Dashboard:
+The dashboard is built with:
+
+Next.js
+
+React
+
+TypeScript
+
+It communicates with the backend through the configured API layer.
+
+The dashboard includes operational information such as:
+
+API connection status,
+
+incidents,
+
+severity information,
+
+security-event information,
+
+investigation results,
+
+system status.
+
+Live Dashboard
 
 https://autonomous-ai-cybersecurity.vercel.app
 
-The dashboard communicates with the FastAPI backend through a
-server-side API proxy so the backend credential is not exposed directly
-to the browser.
+18. Docker & Container Architecture
 
-Local Development
+Docker is used to package and run the project's services consistently.
 
-Prerequisites
+The local infrastructure includes services such as:
 
-Recommended components:
+┌─────────────────────────────────────────┐
+│              Docker Environment         │
+│                                         │
+│  ┌─────────┐   ┌──────────────┐        │
+│  │ FastAPI │   │ Wazuh        │        │
+│  └─────────┘   └──────────────┘        │
+│                                         │
+│  ┌─────────┐   ┌──────────────┐        │
+│  │Postgres │   │ Redis        │        │
+│  └─────────┘   └──────────────┘        │
+│                                         │
+│  ┌─────────┐   ┌──────────────┐        │
+│  │ Neo4j   │   │ Qdrant       │        │
+│  └─────────┘   └──────────────┘        │
+│                                         │
+│  ┌────────────┐ ┌────────────┐         │
+│  │ Prometheus │ │ Grafana    │         │
+│  └────────────┘ └────────────┘         │
+└─────────────────────────────────────────┘
+
+Docker provides isolated, repeatable environments for the backend and
+supporting infrastructure.
+
+19. Monitoring & Observability
+
+The platform includes:
+
+Prometheus
+
+Used for application/system metrics.
+
+Live metrics:
+
+https://autonomous-ai-cybersecurity-1.onrender.com/metrics
+
+Grafana
+
+Used for monitoring dashboards and operational visibility.
+
+Wazuh
+
+Used for security monitoring and alert visibility.
+
+Together:
+
+Application Metrics → Prometheus → Grafana
+Security Alerts     → Wazuh     → Security Pipeline
+
+20. Deployment
+
+The project includes a deployed architecture:
+
+                         Internet
+                            │
+              ┌─────────────┴─────────────┐
+              ↓                           ↓
+      Vercel Dashboard               Render Backend
+      Next.js / React                 FastAPI
+                                          │
+                         ┌────────────────┼───────────────┐
+                         ↓                ↓               ↓
+                    PostgreSQL          APIs        Authentication
+
+Frontend
+
+Hosted on Vercel:
+
+https://autonomous-ai-cybersecurity.vercel.app
+
+Backend
+
+Hosted on Render:
+
+https://autonomous-ai-cybersecurity-1.onrender.com
+
+The backend requires authentication for protected application endpoints.
+
+21. End-to-End Controlled Test
+
+A controlled test processed:
+
+1,000 network flows
+        ↓
+ML Detection
+        ↓
+Incident Correlation
+        ↓
+3 incidents
+        ↓
+Selected high-severity incident
+        ↓
+905 related events
+        ↓
+MITRE ATT&CK retrieval
+        ↓
+Grounded AI investigation
+
+This validates the intended relationship between detection, correlation,
+persistence, retrieval, and AI investigation.
+
+22. Automated Testing
+
+The project uses Pytest.
+
+Reported test status:
+
+564 tests passed
+0 tests failed
+
+Additional verified areas include:
+
+Redis tests                 21/21
+Ollama provider             Passed
+End-to-end 1,000-flow test  Passed
+API authentication          Tested
+Prometheus metrics          Tested
+PostgreSQL connectivity     Verified
+Neo4j connectivity          Verified
+
+Run tests:
+
+pytest -q
+
+23. Local Setup
+
+Requirements
+
+Recommended environment:
 
 Python 3.10+
 
 Docker Desktop
+
+WSL2 / Ubuntu where required
+
+Node.js / npm
 
 PostgreSQL
 
@@ -404,14 +699,12 @@ Qdrant
 
 Wazuh
 
-Node.js / npm for the dashboard
-
-Clone the Repository
+Clone
 
 git clone https://github.com/praweshyadav/autonomous-ai-cybersecurity.git
 cd autonomous-ai-cybersecurity
 
-Create a Virtual Environment
+Python Environment
 
 Windows PowerShell:
 
@@ -423,21 +716,21 @@ Linux/macOS:
 python3 -m venv .venv
 source .venv/bin/activate
 
-Install Python Dependencies
+Install Dependencies
 
 pip install -r requirements.txt
 
-For reproducible dependency installation where appropriate:
+For the locked environment:
 
 pip install -r requirements-lock.txt
 
-Environment Configuration
+Environment Variables
 
-Create a local .env file based on the project's environment template.
+Create a local .env using the project's environment template.
 
-Example variables include:
+Typical configuration includes:
 
-DATABASE_URL=postgresql://...
+DATABASE_URL=...
 REDIS_URL=redis://localhost:6379/0
 REDIS_STREAM_NAME=security_events
 
@@ -450,188 +743,112 @@ QDRANT_URL=http://localhost:6333
 OPENAI_API_KEY=...
 TAVILY_API_KEY=...
 
-Never commit real credentials, API keys, passwords, or private tokens
-to GitHub.
+Never commit real API keys, passwords, database credentials, or other
+secrets.
 
-Start the Backend
+Run FastAPI
 
 uvicorn backend.api.main:app --reload
 
-The default local API is:
+Local API:
 
 http://localhost:8000
-
-Health:
-
-http://localhost:8000/health
 
 Swagger:
 
 http://localhost:8000/docs
 
-Start the Dashboard
+Health:
 
-From the dashboard directory:
+http://localhost:8000/health
+
+Run Dashboard
 
 cd dashboard
 npm install
 npm run dev
 
-Docker Services
-
-The local deployment can use Docker for the supporting infrastructure.
-
-Main services include:
-
-Wazuh
-PostgreSQL
-Redis
-Neo4j
-Qdrant
-Prometheus
-Grafana
-FastAPI
-
-Typical service relationships:
-
-                 ┌──────────────┐
-                 │    Wazuh     │
-                 └──────┬───────┘
-                        │
-                        ▼
-                 ┌──────────────┐
-                 │   Ingestion  │
-                 └──────┬───────┘
-                        │
-                        ▼
-                 ┌──────────────┐
-                 │ Redis Stream │
-                 └──────┬───────┘
-                        │
-              ┌─────────┴─────────┐
-              ▼                   ▼
-       ┌────────────┐      ┌──────────────┐
-       │ ML Detect  │      │ Correlation  │
-       └─────┬──────┘      └──────┬───────┘
-             └──────────┬─────────┘
-                        ▼
-              ┌──────────────────┐
-              │ Persistence/RAG  │
-              └──────────────────┘
-
-Testing
-
-The project uses Pytest for automated testing.
-
-Reported test results include:
-
-564 tests passed
-
-0 tests failed
-
-Redis tests: 21/21
-
-Ollama provider test passed
-
-End-to-end 1,000-flow test passed
-
-API authentication tested
-
-Prometheus metrics tested
-
-PostgreSQL connectivity verified
-
-Neo4j connectivity verified
-
-Run the test suite with:
-
-pytest -q
-
-Security Design
-
-Security is a central part of the architecture.
-
-Authorized Monitoring
-
-Only authorized servers, systems, and log sources should be connected.
-
-Secret Management
-
-Secrets are provided through environment variables and are excluded from
-source control.
-
-ML / LLM Separation
-
-The system separates:
-
-ML Detection
-     ↓
-Incident Context
-     ↓
-LLM Investigation
-
-The LLM does not replace the numerical detection model.
-
-Grounded Investigation
-
-AI investigation uses retrieved evidence and incident context rather
-than relying only on unconstrained model output.
-
-Controlled Response
-
-Response actions are restricted by policy:
-
-Known + Allowed Action
-        │
-        ▼
-Policy Evaluation
-        │
-        ├── Low Risk ───────► Execute if permitted
-        │
-        └── Medium/High ────► Human Approval
-
-Unknown actions are denied.
-
-Auditability
-
-Investigation and response activity is recorded so that actions and
-outcomes can be reviewed.
-
-Repository Structure
+24. Repository Structure
 
 autonomous-ai-cybersecurity/
 │
-├── agent/                 # AI investigation and reasoning
-├── api/                   # API routes
-├── configs/               # Configuration
-├── correlation/           # Incident correlation
-├── dashboard/             # Next.js/React dashboard
-├── data/                  # Runtime/data directories
-├── detection/             # ML detection pipeline and models
-├── evaluation/            # Evaluation scripts/results
-├── ingestion/             # Event ingestion and normalization
-├── knowledge_graph/       # Neo4j integration
-├── monitoring/            # Monitoring configuration
-├── notebooks/             # Analysis notebooks
-├── persistence/           # PostgreSQL/incident persistence
-├── rag/                   # RAG and retrieval components
-├── response/              # Response policy and actions
-├── scripts/               # Utility scripts
-├── tests/                 # Automated tests
-├── db/                    # Database schema
+├── agent/                    # AI investigation and orchestration
+├── api/                      # API layer
+├── configs/                  # Configuration
+├── correlation/              # Incident correlation
+├── dashboard/                # Next.js / React frontend
+├── data/                     # Runtime/data directories
+├── detection/                # ML detection and model files
+├── evaluation/               # Evaluation scripts/results
+├── ingestion/                # Event ingestion and normalization
+├── knowledge_graph/          # Neo4j integration
+├── notebooks/                # Data/ML analysis notebooks
+├── persistence/              # Database repositories/adapters
+├── rag/                      # RAG and retrieval
+├── response/                 # Response policy/actions
+├── scripts/                  # Utility scripts
+├── tests/                    # Automated tests
+├── db/                       # Database schema
+│
+├── dashboard/
+│   ├── src/
+│   └── ...
+│
 ├── Dockerfile
 ├── docker-compose.yml
-├── README.md
 ├── requirements.txt
-└── requirements-lock.txt
+├── requirements-lock.txt
+├── pytest.ini
+├── .gitignore
+└── README.md
 
-Project Status
+25. Security Principles
 
-Implemented and Tested
+Authorized Monitoring
+
+Only authorized systems and telemetry sources should be connected.
+
+Secrets
+
+Secrets are supplied through environment variables and must not be
+committed to source control.
+
+ML / LLM Separation
+
+ML handles numerical detection while the AI layer handles investigation
+and reasoning.
+
+Evidence Grounding
+
+AI investigation is supported by retrieved context and available
+incident evidence.
+
+Controlled Response
+
+Response actions are constrained by explicit policies.
+
+Human Approval
+
+Medium- and high-risk actions require human approval.
+
+Auditability
+
+Investigation and response lifecycle information is recorded for review.
+
+Internal Service Protection
+
+Internal services such as databases, Redis, Qdrant, and Neo4j should not
+be exposed publicly without appropriate security controls.
+
+26. Current Project Status
+
+Implemented / Tested
 
 Security-event ingestion
 
 Event normalization
+
+Redis Streams processing
 
 ML detection
 
@@ -641,15 +858,21 @@ PostgreSQL persistence
 
 Neo4j integration
 
-Qdrant retrieval
+Qdrant vector retrieval
 
 RAG pipeline
 
+MITRE ATT&CK context
+
 AI investigation
+
+LangGraph orchestration
 
 Evidence validation
 
 Response policy
+
+Human approval flow
 
 Audit lifecycle
 
@@ -657,20 +880,29 @@ FastAPI backend
 
 API authentication
 
-Next.js dashboard
+Next.js/React dashboard
 
 Docker infrastructure
 
-Prometheus/Grafana monitoring
+Wazuh monitoring
+
+Prometheus metrics
+
+Grafana monitoring
 
 Automated testing
 
-Integration Work
+Render backend deployment
 
-Direct integration of additional real authorized server/log sources can
-be added to the existing ingestion and Redis processing path.
+Vercel frontend deployment
 
-Limitations
+Integration / Future Work
+
+Direct connection of additional real authorized Linux, Windows,
+firewall, and web-server sources can be added to the existing ingestion
+and Redis processing path.
+
+27. Limitations
 
 The supervised detector is trained and evaluated using selected
 CSE-CIC-IDS2018 data.
@@ -683,13 +915,12 @@ network configuration.
 Additional live validation is required before connecting new
 production data sources.
 
-Response automation should remain constrained by organizational
+Response automation must remain constrained by organizational
 security procedures and approval requirements.
 
-Future Improvements
+28. Future Improvements
 
-Add more authorized Linux, Windows, firewall, and web-server
-sources.
+Add more authorized Linux/Windows/firewall/web sources.
 
 Expand attack scenarios and validation datasets.
 
@@ -697,24 +928,65 @@ Improve out-of-distribution detection.
 
 Scale event processing for larger environments.
 
-Expand security operations dashboards.
+Expand SOC-style dashboard capabilities.
 
-Add additional access-control and deployment hardening.
+Add additional access-control hardening.
 
 Improve deployment automation.
 
-Extend investigation knowledge and response playbooks.
+Expand cybersecurity knowledge and response playbooks.
 
-Responsible Use
+Improve real-time investigation and correlation capabilities.
 
-This project is intended for authorized cybersecurity monitoring,
-defensive security research, and educational use.
+29. Responsible Use
 
-Only connect systems and data sources for which you have explicit
-authorization. Do not use the system to access, monitor, or interfere
-with systems without permission.
+This project is intended for:
 
-Author
+authorized cybersecurity monitoring,
+
+defensive security research,
+
+cybersecurity education,
+
+controlled testing environments.
+
+Only connect systems and data sources for which explicit authorization
+exists.
+
+Do not use this platform to access, monitor, disrupt, or interfere with
+systems without permission.
+
+30. Project Documentation
+
+The repository and submission package contain additional project
+documentation, test results, screenshots, source code, and deployment
+information.
+
+The project submission documentation covers:
+
+system architecture,
+
+workflow,
+
+ML evaluation,
+
+RAG,
+
+AI investigation,
+
+response policy,
+
+security design,
+
+testing,
+
+deployment,
+
+limitations,
+
+future work.
+
+31. Author
 
 Prawesh Yadav
 
@@ -725,3 +997,8 @@ https://github.com/praweshyadav
 
 Project Repository:
 https://github.com/praweshyadav/autonomous-ai-cybersecurity
+
+License / Usage
+
+Use this project only in environments where you have appropriate
+authorization to collect and analyze security telemetry.
