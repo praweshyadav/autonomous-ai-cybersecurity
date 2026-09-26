@@ -7,7 +7,43 @@ controlled response planning, auditability, and operational
 monitoring.
 
 
+Responsibilities include:
 
+health checks,
+
+incident APIs,
+
+authentication,
+
+application services,
+
+persistence access,
+
+metrics exposure,
+
+dashboard backend integration.
+
+Live Backend
+
+https://autonomous-ai-cybersecurity-1.onrender.com
+
+Health
+
+https://autonomous-ai-cybersecurity-1.onrender.com/health
+
+Swagger API Documentation
+
+https://autonomous-ai-cybersecurity-1.onrender.com/docs
+
+Prometheus Metrics
+
+https://autonomous-ai-cybersecurity-1.onrender.com/metrics
+
+Protected Incidents API
+
+GET /api/v1/incidents
+
+Protected endpoints require Bearer-token authentication.
 
 
 
